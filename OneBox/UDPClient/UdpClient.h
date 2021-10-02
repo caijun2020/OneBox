@@ -30,6 +30,7 @@ public:
     
     QHostAddress getHostAddress() const;
     uint32_t getServerPort() const;
+    void setServerAddressPort(const QHostAddress &address, uint16_t port);
 
     // True: if there is undeal data in buffer
     // False: no data in buffer
@@ -39,6 +40,8 @@ public:
     // Send data
     void sendData(QHostAddress &address, uint16_t port, const char *data, uint32_t len);
     void sendData(QHostAddress &address, uint16_t port, QByteArray &data);
+    void sendData(const char *data, uint32_t len);
+    void sendData(QByteArray &data);
 
     uint32_t getTxDiagramCnt() const;
     uint32_t getRxDiagramCnt() const;
@@ -48,9 +51,13 @@ public:
 
     void resetTxRxCnt();
 
+    bool getConnectionStatus() const;
+
 signals:
     void newDataReady(void);
     void newDataTx(QHostAddress, uint16_t, QByteArray);
+    void serverChanged(QHostAddress address, uint16_t port);
+    void connectionChanged(bool connected);
 
 public slots:
 
@@ -70,7 +77,12 @@ private:
     uint32_t txTotalBytesSize;
     uint32_t rxTotalBytesSize;
 
+    bool socketInitFlag;    // True: socket init, false: socket close
+
     QMutex mutex;   // Mutex lock
+
+    void setHostAddress(const QHostAddress &address);
+    void setServerPort(uint16_t port);
 
 private slots:
     void readPendingDatagrams();

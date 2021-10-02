@@ -47,6 +47,7 @@ UdpClientWidget::~UdpClientWidget()
 
 void UdpClientWidget::resizeEvent(QResizeEvent *e)
 {
+    Q_UNUSED(e);
     QWidget *pWidget = static_cast<QWidget*>(this->parent());
 
     if(pWidget != NULL)
@@ -65,6 +66,11 @@ void UdpClientWidget::bindModel(UDPClient *clientP)
 
         connect(udpClient, SIGNAL(newDataReady()), this, SLOT(updateIncomingData()));
         connect(udpClient, SIGNAL(newDataTx(QHostAddress,uint16_t,QByteArray)), this, SLOT(updateTxDataToLog(QHostAddress,uint16_t,QByteArray)));
+        connect(udpClient, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
+        connect(udpClient, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
+
+        isRunning = udpClient->getConnectionStatus();
+        updateConnectionStatus(isRunning);
     }
 }
 
@@ -84,11 +90,8 @@ void UdpClientWidget::initWidgetFont()
 
 void UdpClientWidget::initWidgetStyle()
 {
-    ui->pushButton_connect->setText(tr("Start"));
-
-    // Update Status Color
-    ui->label_status->setStyleSheet(BG_COLOR_RED);
     ui->label_status->setText("");
+    updateConnectionStatus(isRunning);
 
     // Get host IP address
     ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
@@ -213,19 +216,11 @@ void UdpClientWidget::on_pushButton_connect_clicked()
 
     if(true == isRunning)
     {
-        ui->pushButton_connect->setText(tr("Stop"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
-
         udpClient->initSocket(QHostAddress::Any, ui->lineEdit_localPort->text().toInt());
+        udpClient->setServerAddressPort(QHostAddress(ui->lineEdit_IP->text()), ui->lineEdit_serverPort->text().toInt());
     }
     else
-    {   ui->pushButton_connect->setText(tr("Start"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_RED);
-
+    {
         udpClient->closeSocket();
     }
 }
@@ -293,6 +288,30 @@ void UdpClientWidget::on_checkBox_hex_clicked(bool checked)
 void UdpClientWidget::on_checkBox_autoClear_clicked(bool checked)
 {
     autoClearRxFlag = checked;
+}
+
+void UdpClientWidget::updateServerInfo(QHostAddress address, uint16_t port)
+{
+    ui->lineEdit_IP->setText(address.toString());
+    ui->lineEdit_serverPort->setText(QString::number(port));
+}
+
+void UdpClientWidget::updateConnectionStatus(bool connected)
+{
+    if(connected)
+    {
+        ui->pushButton_connect->setText(tr("Disconnect"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
+    }
+    else
+    {
+        ui->pushButton_connect->setText(tr("Connect"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_RED);
+    }
 }
 
 

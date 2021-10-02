@@ -34,11 +34,12 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
     // Reserve 4Kbytes
     rxDataBuf.reserve(4000);
 
+    // Init signal & slot
     connect(&refreshUITimer, SIGNAL(timeout()), this, SLOT(updateUI()));
     refreshUITimer.start(1000);  //1s
 
     // Set Window Title
-    this->setWindowTitle( tr("UDP Server Widget") );
+    this->setWindowTitle(tr("UDP Server Widget"));
 }
 
 UdpServerWidget::~UdpServerWidget()

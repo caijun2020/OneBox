@@ -126,7 +126,7 @@ uint32_t UDPServer::getConnectionCount() const
 QString UDPServer::getClientInfo(uint32_t clientIndex)
 {
     QString infoStr = "";
-    if(clientIndex < clientList.size())
+    if(clientIndex < (uint32_t)clientList.size())
     {
         infoStr = clientList[clientIndex].address.toString();
         infoStr.append(":");
@@ -167,7 +167,7 @@ bool UDPServer::getUndealData(QByteArray &data)
 
 void UDPServer::sendData(uint32_t clientIndex, const char *data, uint32_t len)
 {
-    if(clientIndex >= clientList.size())
+    if(clientIndex >= (uint32_t)clientList.size())
     {
         qDebug("clientIndex %d is out of connections", clientIndex);
         return;

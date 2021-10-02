@@ -15,7 +15,8 @@ PURPOSE:        UDP Client interface
 UDPClient::UDPClient(QObject *parent) :
     QThread(parent),
     udpSocket(new QUdpSocket),
-    fifoBuf(new FIFOBuffer)
+    fifoBuf(new FIFOBuffer),
+    socketInitFlag(false)
 {
     resetTxRxCnt();
 }
@@ -43,11 +44,21 @@ void UDPClient::initSocket(const QHostAddress &address, uint16_t port)
 
     udpSocket->bind(address, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+
+    socketInitFlag = true;
+
+    // Emit signal connected to server
+    emit connectionChanged(socketInitFlag);
 }
 
 void UDPClient::closeSocket()
 {
     udpSocket->close();
+
+    socketInitFlag = false;
+
+    // Emit signal disconnection
+    emit connectionChanged(socketInitFlag);
 }
 
 void UDPClient::sendData(QHostAddress &address, uint16_t port, const char *data, uint32_t len)
@@ -77,6 +88,29 @@ void UDPClient::sendData(QHostAddress &address, uint16_t port, QByteArray &data)
     }
 
     sendData(address, port, data.constData(), data.size());
+}
+
+void UDPClient::sendData(const char *data, uint32_t len)
+{
+    if(NULL == data || 0 == len)
+    {
+        return;
+    }
+
+    if(!hostAddr.isNull() && serverPort > 0)
+    {
+        sendData(hostAddr, serverPort, data, len);
+    }
+}
+
+void UDPClient::sendData(QByteArray &data)
+{
+    if(data.isEmpty())
+    {
+        return;
+    }
+
+    sendData(data.constData(), data.size());
 }
 
 void UDPClient::readPendingDatagrams()
@@ -132,6 +166,25 @@ uint32_t UDPClient::getServerPort() const
 QHostAddress UDPClient::getHostAddress() const
 {
     return hostAddr;
+}
+
+void UDPClient::setHostAddress(const QHostAddress &address)
+{
+    hostAddr = address;
+}
+
+void UDPClient::setServerPort(uint16_t port)
+{
+    serverPort = port;
+}
+
+void UDPClient::setServerAddressPort(const QHostAddress &address, uint16_t port)
+{
+    setHostAddress(address);
+    setServerPort(port);
+
+    // Emit signal
+    emit serverChanged(address, port);
 }
 
 bool UDPClient::getUndealData(char *dataP, uint32_t &len)
@@ -190,4 +243,9 @@ void UDPClient::resetTxRxCnt()
 
     txTotalBytesSize = 0;
     rxTotalBytesSize = 0;
+}
+
+bool UDPClient::getConnectionStatus() const
+{
+    return socketInitFlag;
 }

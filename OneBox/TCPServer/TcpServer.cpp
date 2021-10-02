@@ -172,7 +172,7 @@ uint32_t TCPServer::getConnectionCount() const
 QString TCPServer::getClientInfo(uint32_t clientIndex)
 {
     QString infoStr = "";
-    if(clientIndex < tcpClientList.size())
+    if(clientIndex < (uint32_t)tcpClientList.size())
     {
         infoStr = tcpClientList[clientIndex]->peerAddress().toString();
         infoStr.append(":");
@@ -185,7 +185,7 @@ QString TCPServer::getClientInfo(uint32_t clientIndex)
 QHostAddress TCPServer::getClientAddress(uint32_t clientIndex)
 {
     QHostAddress clientAddress;
-    if(clientIndex < tcpClientList.size())
+    if(clientIndex < (uint32_t)tcpClientList.size())
     {
         clientAddress = tcpClientList[clientIndex]->peerAddress();
     }
@@ -196,7 +196,7 @@ QHostAddress TCPServer::getClientAddress(uint32_t clientIndex)
 quint16 TCPServer::getClientPort(uint32_t clientIndex)
 {
     quint16 clientPort = 0;
-    if(clientIndex < tcpClientList.size())
+    if(clientIndex < (uint32_t)tcpClientList.size())
     {
         clientPort = tcpClientList[clientIndex]->peerPort();
     }
@@ -235,7 +235,7 @@ bool TCPServer::getUndealData(QByteArray &data)
 
 void TCPServer::sendData(uint32_t clientIndex, const char *data, uint32_t len)
 {
-    if(clientIndex >= tcpClientList.size())
+    if(clientIndex >= (uint32_t)tcpClientList.size())
     {
         return;
     }

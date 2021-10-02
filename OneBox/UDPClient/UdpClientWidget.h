@@ -77,6 +77,10 @@ private slots:
 
     void on_checkBox_autoClear_clicked(bool checked);
 
+    void updateServerInfo(QHostAddress address, uint16_t port);
+
+    void updateConnectionStatus(bool connected);
+
 private:
     Ui::UdpClientWidget *ui;
 
