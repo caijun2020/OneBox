@@ -69,7 +69,7 @@ void UdpClientWidget::bindModel(UDPClient *clientP)
         connect(udpClient, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
         connect(udpClient, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
 
-        isRunning = udpClient->getConnectionStatus();
+        isRunning = udpClient->getRunningStatus();
         updateConnectionStatus(isRunning);
     }
 }
@@ -97,7 +97,7 @@ void UdpClientWidget::initWidgetStyle()
     ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
     qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
 
-    ui->lineEdit_serverPort->setText(QString::number(50000));
+    ui->lineEdit_serverPort->setText(QString::number(8080));
     ui->lineEdit_localPort->setText(QString::number(54321));
 
     ui->checkBox_hex->setChecked(hexFormatFlag);

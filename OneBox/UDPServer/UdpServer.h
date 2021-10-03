@@ -58,6 +58,8 @@ public:
 
     void resetTxRxCnt();
 
+    bool getRunningStatus() const;
+
 signals:
     void connectionIn(QString);
     void connectionOut(QString);
@@ -65,6 +67,9 @@ signals:
     void newDataReady(int, QByteArray);
     void newDataTx(QHostAddress, int, QByteArray);
     void message(const QString& info);
+
+    void serverChanged(QHostAddress address, uint16_t port);
+    void connectionChanged(bool connected);
 
 private:
 
@@ -92,6 +97,8 @@ private:
     uint32_t rxTotalBytesSize;
 
     QMutex mutex;   // Mutex lock
+
+    bool isRunning;   // Flag to indicate server is running or not
 
     // Add new client to list
     void addClientToList(QHostAddress address, uint16_t port);

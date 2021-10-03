@@ -78,8 +78,18 @@ void UdpServerWidget::bindModel(UDPServer *serverP)
         connect(udpServer, SIGNAL(newDataTx(QHostAddress,int,QByteArray)), this, SLOT(updateTxDataToLog(QHostAddress,int,QByteArray)));
         connect(udpServer, SIGNAL(message(QString)), this, SLOT(updateMessageToLog(QString)));
 
-        // Enable Listen
-        on_pushButton_listen_clicked();
+        connect(udpServer, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
+        connect(udpServer, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
+
+        isServerRunning = udpServer->getRunningStatus();
+        updateConnectionStatus(isServerRunning);
+
+        // If server is not running, start listen
+        if(!isServerRunning)
+        {
+            // Enable Listen
+            on_pushButton_listen_clicked();
+        }
     }
 }
 
@@ -99,11 +109,9 @@ void UdpServerWidget::initWidgetFont()
 
 void UdpServerWidget::initWidgetStyle()
 {
-    ui->pushButton_listen->setText(tr("Start Listen"));
-
     // Update Status Color
-    ui->label_status->setStyleSheet(BG_COLOR_RED);
     ui->label_status->setText("");
+    updateConnectionStatus(isServerRunning);
 
     // Get host IP address
     ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
@@ -127,19 +135,10 @@ void UdpServerWidget::on_pushButton_listen_clicked()
 
     if(true == isServerRunning)
     {
-        ui->pushButton_listen->setText(tr("Stop Listen"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
-
         udpServer->initSocket(QHostAddress::Any, ui->lineEdit_listenPort->text().toInt());
     }
     else
-    {   ui->pushButton_listen->setText(tr("Start Listen"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_RED);
-
+    {
         udpServer->closeSocket();
     }
 }
@@ -399,4 +398,28 @@ void UdpServerWidget::on_checkBox_hex_clicked(bool checked)
 void UdpServerWidget::on_checkBox_autoClear_clicked(bool checked)
 {
     autoClearRxFlag = checked;
+}
+
+void UdpServerWidget::updateServerInfo(QHostAddress address, uint16_t port)
+{
+    ui->lineEdit_IP->setText(address.toString());
+    ui->lineEdit_listenPort->setText(QString::number(port));
+}
+
+void UdpServerWidget::updateConnectionStatus(bool connected)
+{
+    if(true == isServerRunning)
+    {
+        ui->pushButton_listen->setText(tr("Stop Listen"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
+    }
+    else
+    {
+        ui->pushButton_listen->setText(tr("Start Listen"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_RED);
+    }
 }

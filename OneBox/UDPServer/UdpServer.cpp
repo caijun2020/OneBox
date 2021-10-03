@@ -19,7 +19,8 @@ UDPServer::UDPServer(QObject *parent) :
     txPacketCnt(0),
     rxPacketCnt(0),
     txTotalBytesSize(0),
-    rxTotalBytesSize(0)
+    rxTotalBytesSize(0),
+    isRunning(false)
 {
 }
 
@@ -44,16 +45,28 @@ void UDPServer::initSocket(const QHostAddress &address, uint16_t port)
     hostAddr = address;
     serverPort = port;
 
+	
     // If socket is already bind, need to close socket, then bind again
     closeSocket();
 
-    udpSocket->bind(address, serverPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+    udpSocket->bind(hostAddr, serverPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+	
+	isRunning = true;
+	
+	// Emit signal
+    emit serverChanged(hostAddr, serverPort);
+	emit connectionChanged(isRunning);	
 }
 
 void UDPServer::closeSocket()
 {
     udpSocket->close();
+	
+	isRunning = false;
+
+    // Emit signal
+    emit connectionChanged(isRunning);
 }
 
 void UDPServer::readPendingDatagrams()
@@ -307,4 +320,9 @@ void UDPServer::resetTxRxCnt()
 
     txTotalBytesSize = 0;
     rxTotalBytesSize = 0;
+}
+
+bool UDPServer::getRunningStatus() const
+{
+    return isRunning;
 }

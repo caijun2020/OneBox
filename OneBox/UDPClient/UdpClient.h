@@ -51,7 +51,7 @@ public:
 
     void resetTxRxCnt();
 
-    bool getConnectionStatus() const;
+    bool getRunningStatus() const;
 
 signals:
     void newDataReady(void);
@@ -77,7 +77,7 @@ private:
     uint32_t txTotalBytesSize;
     uint32_t rxTotalBytesSize;
 
-    bool socketInitFlag;    // True: socket init, false: socket close
+    bool isRunning;    // True: socket init, false: socket close
 
     QMutex mutex;   // Mutex lock
 

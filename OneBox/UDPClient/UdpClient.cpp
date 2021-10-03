@@ -16,7 +16,7 @@ UDPClient::UDPClient(QObject *parent) :
     QThread(parent),
     udpSocket(new QUdpSocket),
     fifoBuf(new FIFOBuffer),
-    socketInitFlag(false)
+    isRunning(false)
 {
     resetTxRxCnt();
 }
@@ -45,25 +45,31 @@ void UDPClient::initSocket(const QHostAddress &address, uint16_t port)
     udpSocket->bind(address, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
 
-    socketInitFlag = true;
+    isRunning = true;
 
     // Emit signal connected to server
-    emit connectionChanged(socketInitFlag);
+    emit connectionChanged(isRunning);
 }
 
 void UDPClient::closeSocket()
 {
     udpSocket->close();
 
-    socketInitFlag = false;
+    isRunning = false;
 
     // Emit signal disconnection
-    emit connectionChanged(socketInitFlag);
+    emit connectionChanged(isRunning);
 }
 
 void UDPClient::sendData(QHostAddress &address, uint16_t port, const char *data, uint32_t len)
 {
     if(NULL == data || 0 == len)
+    {
+        return;
+    }
+
+    // When socket is close, do not send out data
+    if(!isRunning)
     {
         return;
     }
@@ -245,7 +251,7 @@ void UDPClient::resetTxRxCnt()
     rxTotalBytesSize = 0;
 }
 
-bool UDPClient::getConnectionStatus() const
+bool UDPClient::getRunningStatus() const
 {
-    return socketInitFlag;
+    return isRunning;
 }
