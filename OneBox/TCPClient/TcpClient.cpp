@@ -11,10 +11,12 @@ PURPOSE:        TCP Client interface
 #undef TCP_CLIENT_DEBUG_TRACE
 
 TCPClient::TCPClient(QObject *parent) :
-    tcpClient(new QTcpSocket(this)),
+    tcpClient(new QTcpSocket),
     fifoBuf(new FIFOBuffer),
     hostAddr(QHostAddress::Any),
-    listenPort(0)
+    listenPort(0),
+    m_timeOutInMS(1000),
+    isRunning(false)
 {
     resetTxRxCnt();
 
@@ -93,8 +95,11 @@ void TCPClient::removeConnection()
     // If the client in UnconnectedState
     if(tcpClient->state() == QAbstractSocket::UnconnectedState)
     {
+        isRunning = false;
+
         // Emit signals to notice connection changed
         emit connectionOut();
+        emit connectionChanged(isRunning);
     }
 }
 
@@ -103,11 +108,17 @@ bool TCPClient::connectToServer(const QHostAddress &ip, uint16_t port)
     bool ret = false;
 
     tcpClient->connectToHost(ip, port);
-    if (tcpClient->waitForConnected(1000))
+    if (tcpClient->waitForConnected(m_timeOutInMS))
     {
         ret = true;
         hostAddr = ip;
         listenPort = port;
+
+        isRunning = true;
+
+        // Emit signals
+        emit connectionChanged(isRunning);
+        emit serverChanged(ip, port);
     }
 
     return ret;
@@ -115,24 +126,14 @@ bool TCPClient::connectToServer(const QHostAddress &ip, uint16_t port)
 
 bool TCPClient::connectToServer(QString ip, uint16_t port)
 {
-    bool ret = false;
-
-    tcpClient->connectToHost(ip, port);
-    if (tcpClient->waitForConnected(1000))
-    {
-        ret = true;
-        hostAddr = QHostAddress(ip);
-        listenPort = port;
-    }
-
-    return ret;
+    return connectToServer(QHostAddress(ip), port);
 }
 
 void TCPClient::disconnectFromServer()
 {
     tcpClient->disconnectFromHost();
     if (tcpClient->state() == QAbstractSocket::UnconnectedState ||
-             tcpClient->waitForDisconnected(1000))
+             tcpClient->waitForDisconnected(m_timeOutInMS))
     {
         qDebug() << "disconnected successfully";
     }
@@ -181,17 +182,19 @@ bool TCPClient::getUndealData(QByteArray &data)
     return ret;
 }
 
-void TCPClient::sendData(const char *data, uint32_t len)
+bool TCPClient::sendData(const char *data, uint32_t len)
 {
+    bool ret = false;
+
     // If not in connected state then return
     if(tcpClient->state() != QAbstractSocket::ConnectedState)
     {
-        return;
+        return ret;
     }
 
     if(NULL == data || 0 == len)
     {
-        return;
+        return ret;
     }
 
     txPacketCnt++;
@@ -201,11 +204,15 @@ void TCPClient::sendData(const char *data, uint32_t len)
 
     // Emit signal
     emit newDataTx(hostAddr, listenPort, QByteArray(data, len));
+
+    ret = true;
+
+    return ret;
 }
 
-void TCPClient::sendData(QByteArray &data)
+bool TCPClient::sendData(QByteArray &data)
 {
-    sendData(data.constData(), data.size());
+    return sendData(data.constData(), data.size());
 }
 
 uint32_t TCPClient::getTxDiagramCnt() const
@@ -235,5 +242,10 @@ void TCPClient::resetTxRxCnt()
 
     txTotalBytesSize = 0;
     rxTotalBytesSize = 0;
+}
+
+bool TCPClient::getRunningStatus() const
+{
+    return isRunning;
 }
 

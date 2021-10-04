@@ -10,11 +10,19 @@ TcpServerWidget::TcpServerWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::TcpServerWidget),
     tcpServer(NULL),
-    isTcpRunning(false),
+    isRunning(false),
     hexFormatFlag(false),
-    autoClearRxFlag(true)
+    autoClearRxFlag(true),
+    serverIP("192.168.2.102"),
+    listenPort(50000)
 {
     ui->setupUi(this);
+
+    // Default setting file
+    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+
+    // Load Settings from ini file
+    loadSettingFromIniFile();
 
     // Init Widget Font type and size
     initWidgetFont();
@@ -32,10 +40,12 @@ TcpServerWidget::TcpServerWidget(QWidget *parent) :
 TcpServerWidget::~TcpServerWidget()
 {
     delete ui;
+    delete currentSetting;
 }
 
 void TcpServerWidget::resizeEvent(QResizeEvent *e)
 {
+    Q_UNUSED(e);
     QWidget *pWidget = static_cast<QWidget*>(this->parent());
 
     if(pWidget != NULL)
@@ -57,8 +67,18 @@ void TcpServerWidget::bindModel(TCPServer *serverP)
         connect(tcpServer, SIGNAL(newDataReady(uint32_t)), this, SLOT(updateIncomingData(uint32_t)));
         connect(tcpServer, SIGNAL(newDataTx(QHostAddress,uint16_t,QByteArray)), this, SLOT(updateTxDataToLog(QHostAddress,uint16_t,QByteArray)));
 
-        // Enable Listen
-        on_pushButton_listen_clicked();
+        connect(tcpServer, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
+        connect(tcpServer, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
+
+        isRunning = tcpServer->getRunningStatus();
+        updateConnectionStatus(isRunning);
+
+        // If server is not running, start listen
+        if(!isRunning)
+        {
+            // Enable Listen
+            on_pushButton_listen_clicked();
+        }
     }
 }
 
@@ -78,20 +98,47 @@ void TcpServerWidget::initWidgetFont()
 
 void TcpServerWidget::initWidgetStyle()
 {
-    ui->pushButton_listen->setText(tr("Start Listen"));
-
     // Update Status Color
-    ui->label_status->setStyleSheet(BG_COLOR_RED);
     ui->label_status->setText("");
+    updateConnectionStatus(isRunning);
 
     // Get host IP address
-    ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
+    //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
     qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
-
-    ui->lineEdit_listenPort->setText(QString::number(50000));
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+}
+
+void TcpServerWidget::loadSettingFromIniFile()
+{
+    currentSetting->beginGroup("TCPServer");
+
+    if(currentSetting->contains("IP"))
+    {
+        // Load IP
+        serverIP = currentSetting->value("IP").toString();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("IP", serverIP);
+    }
+    ui->lineEdit_IP->setText(serverIP);
+
+    if(currentSetting->contains("Port"))
+    {
+        // Load listen port
+        listenPort = currentSetting->value("Port").toInt();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("Port", listenPort);
+    }
+    ui->lineEdit_listenPort->setText(QString::number(listenPort));
+
+    currentSetting->endGroup();
 }
 
 void TcpServerWidget::on_pushButton_listen_clicked()
@@ -102,23 +149,14 @@ void TcpServerWidget::on_pushButton_listen_clicked()
     }
 
     // Toggle flag
-    isTcpRunning = !isTcpRunning;
+    isRunning = !isRunning;
 
-    if(true == isTcpRunning)
+    if(true == isRunning)
     {
-        ui->pushButton_listen->setText(tr("Stop Listen"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
-
         tcpServer->beginListen(QHostAddress::Any, ui->lineEdit_listenPort->text().toInt());
     }
     else
-    {   ui->pushButton_listen->setText(tr("Start Listen"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_RED);
-
+    {
         tcpServer->stopListen();
     }
 }
@@ -335,4 +373,54 @@ void TcpServerWidget::on_checkBox_hex_clicked(bool checked)
 void TcpServerWidget::on_checkBox_autoClear_clicked(bool checked)
 {
     autoClearRxFlag = checked;
+}
+
+void TcpServerWidget::updateServerInfo(QHostAddress address, uint16_t port)
+{
+    ui->lineEdit_IP->setText(address.toString());
+    ui->lineEdit_listenPort->setText(QString::number(port));
+}
+
+void TcpServerWidget::updateConnectionStatus(bool connected)
+{
+    isRunning = connected;
+
+    if(true == isRunning)
+    {
+        ui->pushButton_listen->setText(tr("Stop Listen"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
+    }
+    else
+    {
+        ui->pushButton_listen->setText(tr("Start Listen"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_RED);
+    }
+}
+
+void TcpServerWidget::updateSettingToFile()
+{
+    currentSetting->beginGroup("TCPServer");
+    currentSetting->setValue("IP", serverIP);
+    currentSetting->setValue("Port", listenPort);
+    currentSetting->endGroup();
+}
+
+void TcpServerWidget::on_lineEdit_IP_editingFinished()
+{
+    serverIP = ui->lineEdit_IP->text();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void TcpServerWidget::on_lineEdit_listenPort_editingFinished()
+{
+    listenPort = ui->lineEdit_listenPort->text().toInt();
+
+    // Update setting to ini file
+    updateSettingToFile();
 }

@@ -11,6 +11,7 @@ PURPOSE:        UDP Client Widget UI
 
 #include <QWidget>
 #include <QTimer>
+#include <QSettings>
 #include "UdpClient.h"
 
 
@@ -81,8 +82,16 @@ private slots:
 
     void updateConnectionStatus(bool connected);
 
+    void on_lineEdit_IP_editingFinished();
+
+    void on_lineEdit_serverPort_editingFinished();
+
+    void on_lineEdit_localPort_editingFinished();
+
 private:
     Ui::UdpClientWidget *ui;
+
+    QSettings *currentSetting;  // Store current setting with ini file
 
     UDPClient *udpClient;
     bool isRunning;
@@ -93,8 +102,17 @@ private:
 
     QTimer refreshUITimer;
 
+    QString serverIP;
+    uint16_t serverPort;
+    uint16_t localPort;
+
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget
+
+    void loadSettingFromIniFile();  // Load setting from ini file
+
+    // Update setting to ini file
+    void updateSettingToFile();
 
     // Update log in TextEdit area
     void updateLogData(QString logStr);

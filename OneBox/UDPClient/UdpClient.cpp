@@ -10,7 +10,7 @@ PURPOSE:        UDP Client interface
 #include <QMutexLocker>
 #include <QDebug>
 
-#define UDP_CLIENT_DEBUG_TRACE
+//#define UDP_CLIENT_DEBUG_TRACE
 
 UDPClient::UDPClient(QObject *parent) :
     QThread(parent),
@@ -41,6 +41,8 @@ void UDPClient::initSocket(const QHostAddress &address, uint16_t port)
 {
     // If socket is already bind, need to close socket, then bind again
     closeSocket();
+
+    localPort = port;
 
     udpSocket->bind(address, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
     connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
@@ -172,6 +174,11 @@ uint32_t UDPClient::getServerPort() const
 QHostAddress UDPClient::getHostAddress() const
 {
     return hostAddr;
+}
+
+uint32_t UDPClient::getLocalPort() const
+{
+    return localPort;
 }
 
 void UDPClient::setHostAddress(const QHostAddress &address)

@@ -21,11 +21,19 @@ TcpClientWidget::TcpClientWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::TcpClientWidget),
     tcpClient(NULL),
-    isTcpRunning(false),
+    isRunning(false),
     hexFormatFlag(false),
-    autoClearRxFlag(true)
+    autoClearRxFlag(true),
+    serverIP("192.168.2.102"),
+    serverPort(50000)
 {
     ui->setupUi(this);
+
+    // Default setting file
+    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+
+    // Load Settings from ini file
+    loadSettingFromIniFile();
 
     // Init Widget Font type and size
     initWidgetFont();
@@ -47,6 +55,7 @@ TcpClientWidget::~TcpClientWidget()
 
 void TcpClientWidget::resizeEvent(QResizeEvent *e)
 {
+    Q_UNUSED(e);
     QWidget *pWidget = static_cast<QWidget*>(this->parent());
 
     if(pWidget != NULL)
@@ -67,6 +76,18 @@ void TcpClientWidget::bindModel(TCPClient *clientP)
         connect(tcpClient, SIGNAL(connectionOut()), this, SLOT(diconnectedStatus()));
         connect(tcpClient, SIGNAL(newDataTx(QHostAddress,uint16_t,QByteArray)), this, SLOT(updateTxDataToLog(QHostAddress,uint16_t,QByteArray)));
 
+        connect(tcpClient, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
+        connect(tcpClient, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
+
+        isRunning = tcpClient->getRunningStatus();
+        updateConnectionStatus(isRunning);
+
+        // If client is not running, start listen
+        if(!isRunning)
+        {
+            // Enable Listen
+            on_pushButton_connect_clicked();
+        }
     }
 }
 
@@ -86,20 +107,47 @@ void TcpClientWidget::initWidgetFont()
 
 void TcpClientWidget::initWidgetStyle()
 {
-    ui->pushButton_connect->setText(tr("Connect"));
-
     // Update Status Color
-    ui->label_status->setStyleSheet(BG_COLOR_RED);
     ui->label_status->setText("");
+    updateConnectionStatus(isRunning);
 
     // Get host IP address
-    ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
+    //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
     qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
-
-    ui->lineEdit_listenPort->setText(QString::number(50000));
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+}
+
+void TcpClientWidget::loadSettingFromIniFile()
+{
+    currentSetting->beginGroup("TCPClient");
+
+    if(currentSetting->contains("ServerIP"))
+    {
+        // Load IP
+        serverIP = currentSetting->value("ServerIP").toString();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("ServerIP", serverIP);
+    }
+    ui->lineEdit_IP->setText(serverIP);
+
+    if(currentSetting->contains("ServerPort"))
+    {
+        // Load Server port
+        serverPort = currentSetting->value("ServerPort").toInt();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("ServerPort", serverPort);
+    }
+    ui->lineEdit_listenPort->setText(QString::number(serverPort));
+
+    currentSetting->endGroup();
 }
 
 void TcpClientWidget::on_pushButton_connect_clicked()
@@ -107,15 +155,15 @@ void TcpClientWidget::on_pushButton_connect_clicked()
     QString logStr;
 
     // Toggle flag
-    isTcpRunning = !isTcpRunning;
+    isRunning = !isRunning;
 
-    if(true == isTcpRunning)
+    if(true == isRunning)
     {
         // Connect to server
-        isTcpRunning = tcpClient->connectToServer(ui->lineEdit_IP->text(), ui->lineEdit_listenPort->text().toInt());
+        isRunning = tcpClient->connectToServer(ui->lineEdit_IP->text(), ui->lineEdit_listenPort->text().toInt());
         logStr.append(tr("Connect to %1:").arg(ui->lineEdit_IP->text()));
         logStr.append(ui->lineEdit_listenPort->text());
-        if(isTcpRunning)
+        if(isRunning)
         {
             logStr.append(" succeed");
         }
@@ -132,9 +180,6 @@ void TcpClientWidget::on_pushButton_connect_clicked()
         // Disconnect from server
         tcpClient->disconnectFromServer();
     }
-
-    // Update UI status
-    updateConnectionStatus();
 }
 
 bool TcpClientWidget::connectToServer(QString ip, uint16_t port)
@@ -143,7 +188,7 @@ bool TcpClientWidget::connectToServer(QString ip, uint16_t port)
     ui->lineEdit_listenPort->setText(QString::number(port));
     on_pushButton_connect_clicked();
 
-    return isTcpRunning;
+    return isRunning;
 }
 
 void TcpClientWidget::on_pushButton_send_clicked()
@@ -154,7 +199,7 @@ void TcpClientWidget::on_pushButton_send_clicked()
     QUtilityBox utilityBox;
 
     // If there is no server connected
-    if(!isTcpRunning)
+    if(!isRunning)
     {
         return;
     }
@@ -238,29 +283,11 @@ void TcpClientWidget::updateIncomingData()
     }
 }
 
-void TcpClientWidget::updateConnectionStatus()
-{
-    if(isTcpRunning)
-    {
-        ui->pushButton_connect->setText(tr("Disconnect"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
-    }
-    else
-    {
-        ui->pushButton_connect->setText(tr("Connect"));
-
-        // Update Status Color
-        ui->label_status->setStyleSheet(BG_COLOR_RED);
-    }
-}
-
 void TcpClientWidget::diconnectedStatus()
 {
     QString logStr;
 
-    isTcpRunning = false;
+    isRunning = false;
 
     logStr.append(tr("Disconnect from %1:").arg(ui->lineEdit_IP->text()));
     logStr.append(ui->lineEdit_listenPort->text());
@@ -269,12 +296,12 @@ void TcpClientWidget::diconnectedStatus()
     updateLogData(logStr);
 
     // Update UI status
-    updateConnectionStatus();
+    updateConnectionStatus(isRunning);
 }
 
 bool TcpClientWidget::getTcpConnectionStatus()
 {
-    return isTcpRunning;
+    return isRunning;
 }
 
 void TcpClientWidget::updateTxDataToLog(QHostAddress address, uint16_t port, QByteArray data)
@@ -345,4 +372,54 @@ void TcpClientWidget::on_checkBox_hex_clicked(bool checked)
 void TcpClientWidget::on_checkBox_autoClear_clicked(bool checked)
 {
     autoClearRxFlag = checked;
+}
+
+void TcpClientWidget::updateServerInfo(QHostAddress address, uint16_t port)
+{
+    ui->lineEdit_IP->setText(address.toString());
+    ui->lineEdit_listenPort->setText(QString::number(port));
+}
+
+void TcpClientWidget::updateConnectionStatus(bool connected)
+{
+    isRunning = connected;
+
+    if(connected)
+    {
+        ui->pushButton_connect->setText(tr("Disconnect"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
+    }
+    else
+    {
+        ui->pushButton_connect->setText(tr("Connect"));
+
+        // Update Status Color
+        ui->label_status->setStyleSheet(BG_COLOR_RED);
+    }
+}
+
+void TcpClientWidget::updateSettingToFile()
+{
+    currentSetting->beginGroup("TCPClient");
+    currentSetting->setValue("ServerIP", serverIP);
+    currentSetting->setValue("ServerPort", serverPort);
+    currentSetting->endGroup();
+}
+
+void TcpClientWidget::on_lineEdit_IP_editingFinished()
+{
+    serverIP = ui->lineEdit_IP->text();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void TcpClientWidget::on_lineEdit_listenPort_editingFinished()
+{
+    serverPort = ui->lineEdit_listenPort->text().toInt();
+
+    // Update setting to ini file
+    updateSettingToFile();
 }

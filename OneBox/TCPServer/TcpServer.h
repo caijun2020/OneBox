@@ -61,12 +61,17 @@ public:
 
     void resetTxRxCnt();
 
+    bool getRunningStatus() const;
+
 signals:
-    void connectionChanged(void);
     void connectionIn(QString);
     void connectionOut(QString);
     void newDataReady(uint32_t clientIndex);
+    void newDataReady(int, QByteArray);
     void newDataTx(QHostAddress, uint16_t, QByteArray);
+
+    void serverChanged(QHostAddress address, uint16_t port);
+    void connectionChanged(bool connected);
 
 private:
     QTcpServer *tcpServer;
@@ -84,6 +89,10 @@ private:
     uint32_t rxTotalBytesSize;
 
     QMutex mutex;   // locker
+
+    int m_timeOutInMS;  // connection time out
+
+    bool isRunning;   // Flag to indicate server is running or not
 
     QHostAddress getClientAddress(uint32_t clientIndex);
     quint16 getClientPort(uint32_t clientIndex);

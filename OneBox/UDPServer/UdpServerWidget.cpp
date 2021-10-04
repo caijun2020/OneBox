@@ -19,11 +19,19 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::UdpServerWidget),
     udpServer(NULL),
-    isServerRunning(false),
+    isRunning(false),
     hexFormatFlag(false),
-    autoClearRxFlag(true)
+    autoClearRxFlag(true),
+    serverIP("0.0.0.0"),
+    listenPort(8080)
 {
     ui->setupUi(this);
+
+    // Default setting file
+    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+
+    // Load Settings from ini file
+    loadSettingFromIniFile();
 
     // Init Widget Font type and size
     initWidgetFont();
@@ -45,6 +53,7 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
 UdpServerWidget::~UdpServerWidget()
 {
     delete ui;
+    delete currentSetting;
 }
 
 void UdpServerWidget::resizeEvent(QResizeEvent *e)
@@ -81,11 +90,11 @@ void UdpServerWidget::bindModel(UDPServer *serverP)
         connect(udpServer, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
         connect(udpServer, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
 
-        isServerRunning = udpServer->getRunningStatus();
-        updateConnectionStatus(isServerRunning);
+        isRunning = udpServer->getRunningStatus();
+        updateConnectionStatus(isRunning);
 
         // If server is not running, start listen
-        if(!isServerRunning)
+        if(!isRunning)
         {
             // Enable Listen
             on_pushButton_listen_clicked();
@@ -111,16 +120,45 @@ void UdpServerWidget::initWidgetStyle()
 {
     // Update Status Color
     ui->label_status->setText("");
-    updateConnectionStatus(isServerRunning);
+    updateConnectionStatus(isRunning);
 
     // Get host IP address
-    ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
+    //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
     qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
-
-    ui->lineEdit_listenPort->setText(QString::number(8080));
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+}
+
+void UdpServerWidget::loadSettingFromIniFile()
+{
+    currentSetting->beginGroup("UDPServer");
+
+    if(currentSetting->contains("IP"))
+    {
+        // Load IP
+        serverIP = currentSetting->value("IP").toString();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("IP", serverIP);
+    }
+    ui->lineEdit_IP->setText(serverIP);
+
+    if(currentSetting->contains("Port"))
+    {
+        // Load listen port
+        listenPort = currentSetting->value("Port").toInt();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("Port", listenPort);
+    }
+    ui->lineEdit_listenPort->setText(QString::number(listenPort));
+
+    currentSetting->endGroup();
 }
 
 void UdpServerWidget::on_pushButton_listen_clicked()
@@ -131,11 +169,11 @@ void UdpServerWidget::on_pushButton_listen_clicked()
     }
 
     // Toggle flag
-    isServerRunning = !isServerRunning;
+    isRunning = !isRunning;
 
-    if(true == isServerRunning)
+    if(true == isRunning)
     {
-        udpServer->initSocket(QHostAddress::Any, ui->lineEdit_listenPort->text().toInt());
+        udpServer->initSocket(QHostAddress(ui->lineEdit_IP->text()), ui->lineEdit_listenPort->text().toInt());
     }
     else
     {
@@ -408,7 +446,9 @@ void UdpServerWidget::updateServerInfo(QHostAddress address, uint16_t port)
 
 void UdpServerWidget::updateConnectionStatus(bool connected)
 {
-    if(true == isServerRunning)
+    isRunning = connected;
+
+    if(true == isRunning)
     {
         ui->pushButton_listen->setText(tr("Stop Listen"));
 
@@ -422,4 +462,28 @@ void UdpServerWidget::updateConnectionStatus(bool connected)
         // Update Status Color
         ui->label_status->setStyleSheet(BG_COLOR_RED);
     }
+}
+
+void UdpServerWidget::on_lineEdit_IP_editingFinished()
+{
+    serverIP = ui->lineEdit_IP->text();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void UdpServerWidget::on_lineEdit_listenPort_editingFinished()
+{
+    listenPort = ui->lineEdit_listenPort->text().toInt();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void UdpServerWidget::updateSettingToFile()
+{
+    currentSetting->beginGroup("UDPServer");
+    currentSetting->setValue("IP", serverIP);
+    currentSetting->setValue("Port", listenPort);
+    currentSetting->endGroup();
 }

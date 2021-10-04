@@ -23,9 +23,18 @@ UdpClientWidget::UdpClientWidget(QWidget *parent) :
     udpClient(NULL),
     isRunning(false),
     hexFormatFlag(false),
-    autoClearRxFlag(true)
+    autoClearRxFlag(true),
+    serverIP("192.168.2.102"),
+    serverPort(8080),
+    localPort(54321)
 {
     ui->setupUi(this);
+
+    // Default setting file
+    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+
+    // Load Settings from ini file
+    loadSettingFromIniFile();
 
     // Init Widget Font type and size
     initWidgetFont();
@@ -43,6 +52,7 @@ UdpClientWidget::UdpClientWidget(QWidget *parent) :
 UdpClientWidget::~UdpClientWidget()
 {
     delete ui;
+    delete currentSetting;
 }
 
 void UdpClientWidget::resizeEvent(QResizeEvent *e)
@@ -71,6 +81,13 @@ void UdpClientWidget::bindModel(UDPClient *clientP)
 
         isRunning = udpClient->getRunningStatus();
         updateConnectionStatus(isRunning);
+
+        // If client is not running, start listen
+        if(!isRunning)
+        {
+            // Enable Listen
+            on_pushButton_connect_clicked();
+        }
     }
 }
 
@@ -94,14 +111,54 @@ void UdpClientWidget::initWidgetStyle()
     updateConnectionStatus(isRunning);
 
     // Get host IP address
-    ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
+    //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
     qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
-
-    ui->lineEdit_serverPort->setText(QString::number(8080));
-    ui->lineEdit_localPort->setText(QString::number(54321));
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+}
+
+void UdpClientWidget::loadSettingFromIniFile()
+{
+    currentSetting->beginGroup("UDPClient");
+
+    if(currentSetting->contains("ServerIP"))
+    {
+        // Load IP
+        serverIP = currentSetting->value("ServerIP").toString();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("ServerIP", serverIP);
+    }
+    ui->lineEdit_IP->setText(serverIP);
+
+    if(currentSetting->contains("ServerPort"))
+    {
+        // Load Server port
+        serverPort = currentSetting->value("ServerPort").toInt();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("ServerPort", serverPort);
+    }
+    ui->lineEdit_serverPort->setText(QString::number(serverPort));
+
+    if(currentSetting->contains("LocalPort"))
+    {
+        // Load Local listen port
+        localPort = currentSetting->value("LocalPort").toInt();
+    }
+    else
+    {
+        // Init the default value
+        currentSetting->setValue("LocalPort", localPort);
+    }
+    ui->lineEdit_localPort->setText(QString::number(localPort));
+
+    currentSetting->endGroup();
 }
 
 void UdpClientWidget::on_pushButton_send_clicked()
@@ -298,6 +355,8 @@ void UdpClientWidget::updateServerInfo(QHostAddress address, uint16_t port)
 
 void UdpClientWidget::updateConnectionStatus(bool connected)
 {
+    isRunning = connected;
+
     if(connected)
     {
         ui->pushButton_connect->setText(tr("Disconnect"));
@@ -314,4 +373,36 @@ void UdpClientWidget::updateConnectionStatus(bool connected)
     }
 }
 
+void UdpClientWidget::updateSettingToFile()
+{
+    currentSetting->beginGroup("UDPClient");
+    currentSetting->setValue("ServerIP", serverIP);
+    currentSetting->setValue("ServerPort", serverPort);
+    currentSetting->setValue("LocalPort", localPort);
+    currentSetting->endGroup();
+}
 
+
+void UdpClientWidget::on_lineEdit_IP_editingFinished()
+{
+    serverIP = ui->lineEdit_IP->text();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void UdpClientWidget::on_lineEdit_serverPort_editingFinished()
+{
+    serverPort = ui->lineEdit_serverPort->text().toInt();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}
+
+void UdpClientWidget::on_lineEdit_localPort_editingFinished()
+{
+    localPort = ui->lineEdit_localPort->text().toInt();
+
+    // Update setting to ini file
+    updateSettingToFile();
+}

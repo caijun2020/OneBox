@@ -16,7 +16,9 @@ TCPServer::TCPServer(QObject *parent) :
     tcpServer(new QTcpServer(this)),
     fifoBuf(new FIFOBuffer),
     hostAddr(QHostAddress::Any),
-    listenPort(0)
+    listenPort(0),
+    m_timeOutInMS(1000),
+    isRunning(false)
 {
     tcpClientList.clear();
     connect(tcpServer, SIGNAL(newConnection()), this, SLOT(acceptConnection()));
@@ -52,7 +54,6 @@ void TCPServer::acceptConnection()
     connect(currentClient, SIGNAL(disconnected()), this, SLOT(removeConnection()));
 
     // Emit signals to notice connection changed
-    emit connectionChanged();
     emit connectionIn(getClientInfo(tcpClientList.size() - 1));
 }
 
@@ -65,7 +66,6 @@ void TCPServer::removeConnection()
         if(tcpClientList[i]->state() == QAbstractSocket::UnconnectedState)
         {
             // Emit signals to notice connection changed
-            emit connectionChanged();
             emit connectionOut(getClientInfo(i));
 
             tcpClientList.removeAt(i);
@@ -96,6 +96,7 @@ void TCPServer::readPendingData()
 
             // Emit signal
             emit newDataReady(i);
+            emit newDataReady(i, temp);
 
 #ifdef TCP_SERVER_DEBUG_TRACE
             QString ipPortStr;
@@ -127,6 +128,12 @@ bool TCPServer::beginListen(const QHostAddress &address, uint16_t port)
     {
         hostAddr = address;
         listenPort = port;
+
+        isRunning = true;
+
+        // Emit signals
+        emit serverChanged(hostAddr, listenPort);
+        emit connectionChanged(isRunning);
     }
 
     return ret;
@@ -141,7 +148,7 @@ void TCPServer::stopListen()
     {
         socket = tcpClientList[i];
         socket->disconnectFromHost();
-        bool ok = socket->waitForDisconnected(1000);
+        bool ok = socket->waitForDisconnected(m_timeOutInMS);
         if(!ok)
         {
             qDebug() << socket->errorString();
@@ -149,6 +156,11 @@ void TCPServer::stopListen()
     }
 
     tcpServer->close();
+
+    isRunning = false;
+
+    // Emit signals to notice connection changed
+    emit connectionChanged(isRunning);
 }
 
 uint32_t TCPServer::getListenPort() const
@@ -292,4 +304,9 @@ void TCPServer::resetTxRxCnt()
 
     txTotalBytesSize = 0;
     rxTotalBytesSize = 0;
+}
+
+bool TCPServer::getRunningStatus() const
+{
+    return isRunning;
 }

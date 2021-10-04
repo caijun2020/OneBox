@@ -3,6 +3,7 @@
 
 #include <QWidget>
 #include <QTimer>
+#include <QSettings>
 #include "TcpServer.h"
 
 namespace Ui {
@@ -78,11 +79,21 @@ private slots:
 
     void on_checkBox_autoClear_clicked(bool checked);
 
+    void updateServerInfo(QHostAddress address, uint16_t port);
+
+    void updateConnectionStatus(bool connected);
+
+    void on_lineEdit_IP_editingFinished();
+
+    void on_lineEdit_listenPort_editingFinished();
+
 private:
     Ui::TcpServerWidget *ui;
 
+    QSettings *currentSetting;  // Store current setting with ini file
+
     TCPServer *tcpServer;
-    bool isTcpRunning;
+    bool isRunning;
     bool hexFormatFlag; // This flag is used to enable hex format show
     bool autoClearRxFlag; // This flag is used to clear rx buffer automatically
 
@@ -90,8 +101,16 @@ private:
 
     QTimer refreshUITimer;
 
+    QString serverIP;
+    uint16_t listenPort;
+
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget
+
+    void loadSettingFromIniFile();  // Load setting from ini file
+
+    // Update setting to ini file
+    void updateSettingToFile();
 
     // Update log in TextEdit area
     void updateLogData(QString logStr);

@@ -30,6 +30,7 @@ public:
     
     QHostAddress getHostAddress() const;
     uint32_t getServerPort() const;
+    uint32_t getLocalPort() const;
     void setServerAddressPort(const QHostAddress &address, uint16_t port);
 
     // True: if there is undeal data in buffer
@@ -71,6 +72,8 @@ private:
 
     QHostAddress clientAddr;    // Incoming IP
     uint16_t clientPort;        // Incoming port
+
+    uint16_t localPort;        // Local port used to tx/rx msg
 
     uint32_t txPacketCnt;
     uint32_t rxPacketCnt;

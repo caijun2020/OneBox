@@ -42,8 +42,8 @@ public:
     bool getUndealData(QByteArray &data);
 
     // Send data to server
-    void sendData(const char *data, uint32_t len);
-    void sendData(QByteArray &data);
+    bool sendData(const char *data, uint32_t len);
+    bool sendData(QByteArray &data);
 
     uint32_t getTxDiagramCnt() const;
     uint32_t getRxDiagramCnt() const;
@@ -53,10 +53,15 @@ public:
 
     void resetTxRxCnt();
 
+    bool getRunningStatus() const;
+
 signals:
     void newDataReady(void);
     void connectionOut(void);
     void newDataTx(QHostAddress, uint16_t, QByteArray);
+
+    void serverChanged(QHostAddress address, uint16_t port);
+    void connectionChanged(bool connected);
 
 private:
     QTcpSocket *tcpClient;
@@ -72,6 +77,10 @@ private:
     uint32_t rxTotalBytesSize;
 
     QMutex mutex; // Mutex locker
+
+    int m_timeOutInMS;  // connection time out
+
+    bool isRunning;    // True: connected to server, false: disconnected
 
 private slots:
     void readPendingData();
