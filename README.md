@@ -2,6 +2,10 @@
 A toolbox software provides serial port, TCP server/client, UDP server/client functions based on Qt4.
 
 
+V1.0 2021-Nov-18
+1. Bugfix for UDPServer, add udpSocket null check in sendData() in class UDPServer
+
+
 V1.0 2021-Oct-04
 1. Modify class TcpClientWidget/TcpServerWidget/UdpClientWidget/UdpServerWidget to support load ini setting
 2. Add signals serverChanged() and connectionChanged() in class TCPServer/TCPClient to notice UI widget update connection status

@@ -201,6 +201,12 @@ void UDPServer::sendData(QHostAddress &address, uint16_t port, const char *data,
         return;
     }
 
+    // When socket is close, do not send out data
+    if(NULL == udpSocket)
+    {
+        return;
+    }
+
     txPacketCnt++;
     txTotalBytesSize += len;
 
