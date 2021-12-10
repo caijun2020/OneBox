@@ -2,6 +2,10 @@
 A toolbox software provides serial port, TCP server/client, UDP server/client functions based on Qt4.
 
 
+V1.0 2021-Dec-10
+1. Add Show Tx/Rx checkbox in class TcoClientWidget/TcpServerWidget/UdpServerWidget/UdpClientWidget
+
+
 V1.0 2021-Nov-18
 1. Bugfix for UDPServer, add udpSocket null check in sendData() in class UDPServer
 

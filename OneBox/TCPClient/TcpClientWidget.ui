@@ -271,6 +271,20 @@
       </spacer>
      </item>
      <item>
+      <widget class="QCheckBox" name="checkBox_showTx">
+       <property name="text">
+        <string>Show Tx</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QCheckBox" name="checkBox_showRx">
+       <property name="text">
+        <string>Show Rx</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QCheckBox" name="checkBox_hex">
        <property name="text">
         <string>Hex</string>

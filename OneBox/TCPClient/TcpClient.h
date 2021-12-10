@@ -57,6 +57,7 @@ public:
 
 signals:
     void newDataReady(void);
+    void newDataReady(QByteArray);
     void connectionOut(void);
     void newDataTx(QHostAddress, uint16_t, QByteArray);
 

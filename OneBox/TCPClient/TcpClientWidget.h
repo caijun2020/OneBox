@@ -89,6 +89,10 @@ private slots:
 
     void on_lineEdit_listenPort_editingFinished();
 
+    void on_checkBox_showTx_clicked(bool checked);
+
+    void on_checkBox_showRx_clicked(bool checked);
+
 private:
     Ui::TcpClientWidget *ui;
 
@@ -101,10 +105,14 @@ private:
 
     QByteArray rxDataBuf;   // Rx data buffer
 
-    QTimer refreshUITimer;
+    QTimer *refreshTimer;
+    int refreshInMs;
 
     QString serverIP;
     uint16_t serverPort;
+
+    bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
+    bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

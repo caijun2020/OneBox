@@ -68,7 +68,7 @@ private slots:
 
     void on_pushButton_connect_clicked();
 
-    void updateTxDataToLog(QHostAddress address, uint16_t port, QByteArray data);
+    void updateTxDataToLog(QHostAddress address, int port, QByteArray data);
 
     void updateUI();
 
@@ -78,7 +78,7 @@ private slots:
 
     void on_checkBox_autoClear_clicked(bool checked);
 
-    void updateServerInfo(QHostAddress address, uint16_t port);
+    void updateServerInfo(QHostAddress address, int port);
 
     void updateConnectionStatus(bool connected);
 
@@ -87,6 +87,10 @@ private slots:
     void on_lineEdit_serverPort_editingFinished();
 
     void on_lineEdit_localPort_editingFinished();
+
+    void on_checkBox_showTx_clicked(bool checked);
+
+    void on_checkBox_showRx_clicked(bool checked);
 
 private:
     Ui::UdpClientWidget *ui;
@@ -100,11 +104,15 @@ private:
 
     QByteArray rxDataBuf;   // Rx data buffer
 
-    QTimer refreshUITimer;
-
     QString serverIP;
     uint16_t serverPort;
     uint16_t localPort;
+
+    QTimer *refreshTimer;
+    int refreshInMs;
+
+    bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
+    bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

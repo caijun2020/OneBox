@@ -14,7 +14,11 @@ TcpServerWidget::TcpServerWidget(QWidget *parent) :
     hexFormatFlag(false),
     autoClearRxFlag(true),
     serverIP("192.168.2.102"),
-    listenPort(50000)
+    listenPort(50000),
+    refreshTimer(new QTimer),
+    refreshInMs(1000),
+    showTxPacketFlag(true),
+    showRxPacketFlag(true)
 {
     ui->setupUi(this);
 
@@ -30,8 +34,8 @@ TcpServerWidget::TcpServerWidget(QWidget *parent) :
     // Init Widget Style
     initWidgetStyle();
 
-    connect(&refreshUITimer, SIGNAL(timeout()), this, SLOT(updateUI()));
-    refreshUITimer.start(1000);  //1s
+    connect(refreshTimer, SIGNAL(timeout()), this, SLOT(updateUI()));
+    refreshTimer->start(refreshInMs);  //1s
 
     // Set Window Title
     this->setWindowTitle( tr("Tcp Server Widget") );
@@ -41,6 +45,7 @@ TcpServerWidget::~TcpServerWidget()
 {
     delete ui;
     delete currentSetting;
+    delete refreshTimer;
 }
 
 void TcpServerWidget::resizeEvent(QResizeEvent *e)
@@ -108,6 +113,9 @@ void TcpServerWidget::initWidgetStyle()
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+
+    ui->checkBox_showRx->setChecked(showRxPacketFlag);
+    ui->checkBox_showTx->setChecked(showTxPacketFlag);
 }
 
 void TcpServerWidget::loadSettingFromIniFile()
@@ -237,22 +245,25 @@ void TcpServerWidget::updateIncomingData(uint32_t clientIndex)
     rxDataBuf.clear();
     if(tcpServer->getUndealData(rxDataBuf))
     {
-        logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
-        // Update log
-        updateLogData(logStr);
-
-        logStr.clear();
-        logStr.append(tr("Rx Data:"));
-        for(int i = 0; i < rxDataBuf.size(); i++)
+        if(showRxPacketFlag)
         {
-            logStr.append(QString::number((uint8_t)rxDataBuf.at(i), 16).rightJustified(2, '0').toUpper());
-            logStr.append(" ");
+            logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
+            // Update log
+            updateLogData(logStr);
+
+            logStr.clear();
+            logStr.append(tr("Rx Data:"));
+            for(int i = 0; i < rxDataBuf.size(); i++)
+            {
+                logStr.append(QString::number((uint8_t)rxDataBuf.at(i), 16).rightJustified(2, '0').toUpper());
+                logStr.append(" ");
+            }
+            logStr.append("(");
+            logStr.append(rxDataBuf);
+            logStr.append(")");
+            // Update log
+            updateLogData(logStr);
         }
-        logStr.append("(");
-        logStr.append(rxDataBuf);
-        logStr.append(")");
-        // Update log
-        updateLogData(logStr);
 
         // Emit signal, new comming data received
         emit newDataReady(clientIndex, rxDataBuf);
@@ -314,24 +325,27 @@ void TcpServerWidget::updateTxDataToLog(QHostAddress address, uint16_t port, QBy
 {
     QString logStr;
 
-    logStr.append(tr("Send data to %1:%2")
-                  .arg(address.toString())
-                  .arg(port));
-    // Update log
-    updateLogData(logStr);
-
-    logStr.clear();
-    logStr.append(tr("Tx Data:"));
-    for(int i = 0; i < data.size(); i++)
+    if(showTxPacketFlag)
     {
-        logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
-        logStr.append(" ");
+        logStr.append(tr("Send data to %1:%2")
+                      .arg(address.toString())
+                      .arg(port));
+        // Update log
+        updateLogData(logStr);
+
+        logStr.clear();
+        logStr.append(tr("Tx Data:"));
+        for(int i = 0; i < data.size(); i++)
+        {
+            logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
+            logStr.append(" ");
+        }
+        logStr.append("(");
+        logStr.append(data);
+        logStr.append(")");
+        // Update log
+        updateLogData(logStr);
     }
-    logStr.append("(");
-    logStr.append(data);
-    logStr.append(")");
-    // Update log
-    updateLogData(logStr);
 }
 
 void TcpServerWidget::updateUI()
@@ -423,4 +437,14 @@ void TcpServerWidget::on_lineEdit_listenPort_editingFinished()
 
     // Update setting to ini file
     updateSettingToFile();
+}
+
+void TcpServerWidget::on_checkBox_showTx_clicked(bool checked)
+{
+
+}
+
+void TcpServerWidget::on_checkBox_showRx_clicked(bool checked)
+{
+
 }

@@ -23,7 +23,11 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
     hexFormatFlag(false),
     autoClearRxFlag(true),
     serverIP("0.0.0.0"),
-    listenPort(8080)
+    listenPort(8080),
+    refreshTimer(new QTimer),
+    refreshInMs(1000),
+    showTxPacketFlag(true),
+    showRxPacketFlag(true)
 {
     ui->setupUi(this);
 
@@ -43,8 +47,8 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
     rxDataBuf.reserve(4000);
 
     // Init signal & slot
-    connect(&refreshUITimer, SIGNAL(timeout()), this, SLOT(updateUI()));
-    refreshUITimer.start(1000);  //1s
+    connect(refreshTimer, SIGNAL(timeout()), this, SLOT(updateUI()));
+    refreshTimer->start(refreshInMs);  //1s
 
     // Set Window Title
     this->setWindowTitle(tr("UDP Server Widget"));
@@ -54,6 +58,7 @@ UdpServerWidget::~UdpServerWidget()
 {
     delete ui;
     delete currentSetting;
+    delete refreshTimer;
 }
 
 void UdpServerWidget::resizeEvent(QResizeEvent *e)
@@ -87,7 +92,7 @@ void UdpServerWidget::bindModel(UDPServer *serverP)
         connect(udpServer, SIGNAL(newDataTx(QHostAddress,int,QByteArray)), this, SLOT(updateTxDataToLog(QHostAddress,int,QByteArray)));
         connect(udpServer, SIGNAL(message(QString)), this, SLOT(updateMessageToLog(QString)));
 
-        connect(udpServer, SIGNAL(serverChanged(QHostAddress,uint16_t)), this, SLOT(updateServerInfo(QHostAddress,uint16_t)));
+        connect(udpServer, SIGNAL(serverChanged(QHostAddress,int)), this, SLOT(updateServerInfo(QHostAddress,int)));
         connect(udpServer, SIGNAL(connectionChanged(bool)), this, SLOT(updateConnectionStatus(bool)));
 
         isRunning = udpServer->getRunningStatus();
@@ -96,8 +101,8 @@ void UdpServerWidget::bindModel(UDPServer *serverP)
         // If server is not running, start listen
         if(!isRunning)
         {
-            // Enable Listen
-            on_pushButton_listen_clicked();
+            // Enable Listen with delay
+            QTimer::singleShot(refreshInMs, this, SLOT(on_pushButton_listen_clicked()));
         }
     }
 }
@@ -128,6 +133,9 @@ void UdpServerWidget::initWidgetStyle()
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
+
+    ui->checkBox_showRx->setChecked(showRxPacketFlag);
+    ui->checkBox_showTx->setChecked(showTxPacketFlag);
 }
 
 void UdpServerWidget::loadSettingFromIniFile()
@@ -309,22 +317,25 @@ void UdpServerWidget::updateIncomingData(int clientIndex)
     rxDataBuf.clear();
     if(udpServer->getUndealData(rxDataBuf))
     {
-        logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
-        // Update log
-        updateLogData(logStr);
-
-        logStr.clear();
-        logStr.append(tr("Rx Data:"));
-        for(int i = 0; i < rxDataBuf.size(); i++)
+        if(showRxPacketFlag)
         {
-            logStr.append(QString::number((uint8_t)rxDataBuf.at(i), 16).rightJustified(2, '0').toUpper());
-            logStr.append(" ");
+            logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
+            // Update log
+            updateLogData(logStr);
+
+            logStr.clear();
+            logStr.append(tr("Rx Data:"));
+            for(int i = 0; i < rxDataBuf.size(); i++)
+            {
+                logStr.append(QString::number((uint8_t)rxDataBuf.at(i), 16).rightJustified(2, '0').toUpper());
+                logStr.append(" ");
+            }
+            logStr.append("(");
+            logStr.append(rxDataBuf);
+            logStr.append(")");
+            // Update log
+            updateLogData(logStr);
         }
-        logStr.append("(");
-        logStr.append(rxDataBuf);
-        logStr.append(")");
-        // Update log
-        updateLogData(logStr);
 
         // Emit signal, new comming data received
         emit newDataReady(clientIndex, rxDataBuf);
@@ -341,22 +352,25 @@ void UdpServerWidget::updateIncomingData(int clientIndex, QByteArray data)
 
     if(!data.isEmpty())
     {
-        logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
-        // Update log
-        updateLogData(logStr);
-
-        logStr.clear();
-        logStr.append(tr("Rx Data:"));
-        for(int i = 0; i < data.size(); i++)
+        if(showRxPacketFlag)
         {
-            logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
-            logStr.append(" ");
+            logStr.append(tr("Rx data from %1").arg(ui->comboBox_clients->itemText(clientIndex)));
+            // Update log
+            updateLogData(logStr);
+
+            logStr.clear();
+            logStr.append(tr("Rx Data:"));
+            for(int i = 0; i < data.size(); i++)
+            {
+                logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
+                logStr.append(" ");
+            }
+            logStr.append("(");
+            logStr.append(data);
+            logStr.append(")");
+            // Update log
+            updateLogData(logStr);
         }
-        logStr.append("(");
-        logStr.append(data);
-        logStr.append(")");
-        // Update log
-        updateLogData(logStr);
 
         // Emit signal, new comming data received
         emit newDataReady(clientIndex, data);
@@ -367,24 +381,27 @@ void UdpServerWidget::updateTxDataToLog(QHostAddress address, int port, QByteArr
 {
     QString logStr;
 
-    logStr.append(tr("Send data to %1:%2")
-                  .arg(address.toString())
-                  .arg(port));
-    // Update log
-    updateLogData(logStr);
-
-    logStr.clear();
-    logStr.append(tr("Tx Data:"));
-    for(int i = 0; i < data.size(); i++)
+    if(showTxPacketFlag)
     {
-        logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
-        logStr.append(" ");
+        logStr.append(tr("Send data to %1:%2")
+                      .arg(address.toString())
+                      .arg(port));
+        // Update log
+        updateLogData(logStr);
+
+        logStr.clear();
+        logStr.append(tr("Tx Data:"));
+        for(int i = 0; i < data.size(); i++)
+        {
+            logStr.append(QString::number((uint8_t)data.at(i), 16).rightJustified(2, '0').toUpper());
+            logStr.append(" ");
+        }
+        logStr.append("(");
+        logStr.append(data);
+        logStr.append(")");
+        // Update log
+        updateLogData(logStr);
     }
-    logStr.append("(");
-    logStr.append(data);
-    logStr.append(")");
-    // Update log
-    updateLogData(logStr);
 }
 
 void UdpServerWidget::updateMessageToLog(const QString &msg)
@@ -438,7 +455,7 @@ void UdpServerWidget::on_checkBox_autoClear_clicked(bool checked)
     autoClearRxFlag = checked;
 }
 
-void UdpServerWidget::updateServerInfo(QHostAddress address, uint16_t port)
+void UdpServerWidget::updateServerInfo(QHostAddress address, int port)
 {
     ui->lineEdit_IP->setText(address.toString());
     ui->lineEdit_listenPort->setText(QString::number(port));
@@ -486,4 +503,14 @@ void UdpServerWidget::updateSettingToFile()
     currentSetting->setValue("IP", serverIP);
     currentSetting->setValue("Port", listenPort);
     currentSetting->endGroup();
+}
+
+void UdpServerWidget::on_checkBox_showTx_clicked(bool checked)
+{
+    showTxPacketFlag = checked;
+}
+
+void UdpServerWidget::on_checkBox_showRx_clicked(bool checked)
+{
+    showRxPacketFlag = checked;
 }

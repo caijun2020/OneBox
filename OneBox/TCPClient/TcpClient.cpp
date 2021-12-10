@@ -60,6 +60,7 @@ void TCPClient::readPendingData()
 
         // Emit signal
         emit newDataReady();
+        emit newDataReady(temp);
 
 #ifdef TCP_CLIENT_DEBUG_TRACE
         QString ipPortStr;
