@@ -20,6 +20,7 @@ PURPOSE:        UDP Client Widget UI
 UdpClientWidget::UdpClientWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::UdpClientWidget),
+    m_settingFile("config.ini"),
     udpClient(NULL),
     isRunning(false),
     hexFormatFlag(false),
@@ -34,8 +35,11 @@ UdpClientWidget::UdpClientWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Prepend the exe absolute path
+    m_settingFile.prepend(QUtilityBox::instance()->getAppDirPath());
+
     // Default setting file
-    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+    currentSetting = new QSettings(m_settingFile, QSettings::IniFormat);
 
     // Load Settings from ini file
     loadSettingFromIniFile();
@@ -117,7 +121,7 @@ void UdpClientWidget::initWidgetStyle()
 
     // Get host IP address
     //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
-    qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
+    //qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
@@ -128,6 +132,8 @@ void UdpClientWidget::initWidgetStyle()
 
 void UdpClientWidget::loadSettingFromIniFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("UDPClient");
 
     if(currentSetting->contains("ServerIP"))
@@ -389,6 +395,8 @@ void UdpClientWidget::updateConnectionStatus(bool connected)
 
 void UdpClientWidget::updateSettingToFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("UDPClient");
     currentSetting->setValue("ServerIP", serverIP);
     currentSetting->setValue("ServerPort", serverPort);

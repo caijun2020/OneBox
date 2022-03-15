@@ -56,9 +56,13 @@ public:
 
 signals:
     void newDataReady(void);
-    void newDataTx(QHostAddress, uint16_t, QByteArray);
-    void serverChanged(QHostAddress address, uint16_t port);
+    void newDataReady(int, QByteArray);
+    void newDataTx(QHostAddress, int, QByteArray);
+    void serverChanged(QHostAddress address, int port);
     void connectionChanged(bool connected);
+
+    void startListen();
+    void stopListen();
 
 public slots:
 
@@ -73,6 +77,7 @@ private:
     QHostAddress clientAddr;    // Incoming IP
     uint16_t clientPort;        // Incoming port
 
+    QHostAddress localAddr;
     uint16_t localPort;        // Local port used to tx/rx msg
 
     uint32_t txPacketCnt;
@@ -89,6 +94,12 @@ private:
 
 private slots:
     void readPendingDatagrams();
+
+    // Start socket
+    void startSocket();
+
+    // Stop/close socket
+    void stopSocket();
 };
 
 #endif // UDPCLIENT_H

@@ -9,6 +9,7 @@
 TcpServerWidget::TcpServerWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::TcpServerWidget),
+    m_settingFile("config.ini"),
     tcpServer(NULL),
     isRunning(false),
     hexFormatFlag(false),
@@ -22,8 +23,11 @@ TcpServerWidget::TcpServerWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Prepend the exe absolute path
+    m_settingFile.prepend(QUtilityBox::instance()->getAppDirPath());
+
     // Default setting file
-    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+    currentSetting = new QSettings(m_settingFile, QSettings::IniFormat);
 
     // Load Settings from ini file
     loadSettingFromIniFile();
@@ -109,7 +113,7 @@ void TcpServerWidget::initWidgetStyle()
 
     // Get host IP address
     //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
-    qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
+    //qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
@@ -120,6 +124,8 @@ void TcpServerWidget::initWidgetStyle()
 
 void TcpServerWidget::loadSettingFromIniFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("TCPServer");
 
     if(currentSetting->contains("IP"))
@@ -417,6 +423,8 @@ void TcpServerWidget::updateConnectionStatus(bool connected)
 
 void TcpServerWidget::updateSettingToFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("TCPServer");
     currentSetting->setValue("IP", serverIP);
     currentSetting->setValue("Port", listenPort);
@@ -441,10 +449,10 @@ void TcpServerWidget::on_lineEdit_listenPort_editingFinished()
 
 void TcpServerWidget::on_checkBox_showTx_clicked(bool checked)
 {
-
+    showTxPacketFlag = checked;
 }
 
 void TcpServerWidget::on_checkBox_showRx_clicked(bool checked)
 {
-
+    showRxPacketFlag = checked;
 }

@@ -59,6 +59,7 @@ SerialDebugWidget::COMBOX_LIST flowType_combox[] =
 SerialDebugWidget::SerialDebugWidget(QSerialPort *portHandler, QWidget *parent) :
     QWidget(parent),
     ui(new Ui::SerialDebugWidget),
+    m_settingFile("config.ini"),
     serialPort(portHandler),
     comInitData(new struct COM_PORT_INIT_DATA),
     widgetFontType("Arial"),
@@ -66,7 +67,12 @@ SerialDebugWidget::SerialDebugWidget(QSerialPort *portHandler, QWidget *parent) 
     isOpenFlag(false),
     timeStampFlag(false),
     hexFormatFlag(true),
-    autoClearRxFlag(true)
+    autoClearRxFlag(true),
+    refreshTimer(new QTimer),
+    refreshInMs(1000),
+    m_title(""),
+    showTxPacketFlag(true),
+    showRxPacketFlag(true)
 {
     ui->setupUi(this);
 
@@ -76,8 +82,17 @@ SerialDebugWidget::SerialDebugWidget(QSerialPort *portHandler, QWidget *parent) 
     // Init Widget Style
     initWidgetStyle();
 
-    connect(&refreshUITimer, SIGNAL(timeout()), this, SLOT(updateUI()));
-    refreshUITimer.start(1000);  //1s
+    // Prepend the exe absolute path
+    m_settingFile.prepend(QUtilityBox::instance()->getAppDirPath());
+
+    // Default setting file
+    currentSetting = new QSettings(m_settingFile, QSettings::IniFormat);
+
+    // Load Settings from ini file
+    loadSettingFromIniFile();
+
+    connect(refreshTimer, SIGNAL(timeout()), this, SLOT(updateUI()));
+    refreshTimer->start(refreshInMs);  //1s
 
     connect(&autoSendTimer, SIGNAL(timeout()), this, SLOT(autoSendData()));
 
@@ -89,10 +104,13 @@ SerialDebugWidget::~SerialDebugWidget()
 {
     delete ui;
     delete comInitData;
+    delete currentSetting;
+    delete refreshTimer;
 }
 
 void SerialDebugWidget::resizeEvent(QResizeEvent *e)
 {
+    Q_UNUSED(e);
     QWidget *pWidget = static_cast<QWidget*>(this->parent());
 
     if(pWidget != NULL)
@@ -103,6 +121,7 @@ void SerialDebugWidget::resizeEvent(QResizeEvent *e)
 
 void SerialDebugWidget::initWidgetFont()
 {
+#if 0
     // Init Font Size and bold
     ui->label_port->setFont(QFont(widgetFontType, widgetFontSize, QFont::Normal));
     ui->label_baudrate->setFont(QFont(widgetFontType, widgetFontSize, QFont::Normal));
@@ -134,12 +153,17 @@ void SerialDebugWidget::initWidgetFont()
     //ui->label_rxBytes->setFont(QFont(widgetFontType, widgetFontSize, QFont::Normal));
     //ui->label_tx->setFont(QFont(widgetFontType, widgetFontSize, QFont::Normal));
     //ui->label_txBytes->setFont(QFont(widgetFontType, widgetFontSize, QFont::Normal));
+#endif
 }
 
 void SerialDebugWidget::initWidgetStyle()
 {
     ui->spinBox_autoSendInterval->setRange(1, 1000000);
     ui->spinBox_autoSendInterval->setValue(1000);
+
+    QStringList comPorts = QSerialPort::getAvailablePorts();
+    ui->comboBox_port->clear();
+    ui->comboBox_port->insertItems(0, comPorts);
 
     for(uint32_t i = 0; i < (sizeof(baudrate_combox) / sizeof(COMBOX_LIST)); i++)
     {
@@ -178,6 +202,9 @@ void SerialDebugWidget::initWidgetStyle()
     ui->checkBox_timeStamp->setChecked(timeStampFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
     ui->checkBox_hex->setChecked(hexFormatFlag);
+
+    ui->checkBox_showRx->setChecked(showRxPacketFlag);
+    ui->checkBox_showTx->setChecked(showTxPacketFlag);
 }
 
 void SerialDebugWidget::on_pushButton_send_clicked()
@@ -210,10 +237,18 @@ void SerialDebugWidget::bindModel(QSerialPort *portHandler)
 
         serialPort = portHandler;
         connect(serialPort, SIGNAL(newDataReady(QByteArray)), this, SLOT(updateIncomingData(QByteArray)));
+        connect(serialPort, SIGNAL(statusChanged(COM_PORT_INIT_DATA *)), this, SLOT(updateConnectionStatus(COM_PORT_INIT_DATA*)));
 
-        QStringList comPorts = serialPort->getAvailablePorts();
-        ui->comboBox_port->clear();
-        ui->comboBox_port->insertItems(0, comPorts);
+        // Only serial port is open, then update status(Buadrate/Databits/Stopbits...)
+        if(serialPort->isOpen())
+        {
+            serialPort->notifyStatusChanged();
+        }
+        else
+        {
+            // Open com port with delay
+            QTimer::singleShot(refreshInMs, this, SLOT(on_pushButton_open_clicked()));
+        }
     }
 }
 
@@ -277,21 +312,8 @@ void SerialDebugWidget::on_pushButton_open_clicked()
         serialPort->close();
     }
 
-    isOpenFlag = serialPort->isOpen();
-
-    // Update UI display
-    if(isOpenFlag)
-    {
-        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
-        ui->pushButton_open->setText(tr("Close"));
-    }
-    else
-    {
-        ui->label_status->setStyleSheet(BG_COLOR_RED);
-        ui->pushButton_open->setText(tr("Open"));
-    }
-
-    setFunctionUI(!isOpenFlag);
+    // Update setting to file
+    updateSettingToFile();
 }
 
 void SerialDebugWidget::setFunctionUI(bool enable)
@@ -349,7 +371,10 @@ void SerialDebugWidget::updateIncomingData(QByteArray data)
         dataStr.append(data);
     }
 
-    updateLogData(dataStr);
+    if(showRxPacketFlag)
+    {
+        updateLogData(dataStr);
+    }
 }
 
 void SerialDebugWidget::autoSendData()
@@ -409,4 +434,271 @@ void SerialDebugWidget::updateLogData(QString logStr)
 
     ui->textEdit_rxData->insertPlainText(logStr); //Display in the textBrowser
     ui->textEdit_rxData->moveCursor( QTextCursor::End, QTextCursor::MoveAnchor );
+}
+
+void SerialDebugWidget::updateConnectionStatus(struct COM_PORT_INIT_DATA *initData)
+{
+    if(NULL == initData || NULL == serialPort)
+    {
+        return;
+    }
+
+    updateComUI(initData);
+
+    isOpenFlag = serialPort->isOpen();
+
+    // Update UI display
+    if(isOpenFlag)
+    {
+        ui->label_status->setStyleSheet(BG_COLOR_GREEN);
+        ui->pushButton_open->setText(tr("Close"));
+    }
+    else
+    {
+        ui->label_status->setStyleSheet(BG_COLOR_RED);
+        ui->pushButton_open->setText(tr("Open"));
+    }
+
+    setFunctionUI(!isOpenFlag);
+}
+
+void SerialDebugWidget::updateComUI(const struct COM_PORT_INIT_DATA *initData)
+{
+    memcpy(comInitData, initData, sizeof(struct COM_PORT_INIT_DATA));
+
+    for(int i = 0; i < ui->comboBox_port->count(); i++)
+    {
+        if(QString(initData->port) == ui->comboBox_port->itemText(i))
+        {
+            ui->comboBox_port->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(uint32_t i = 0; i < (sizeof(baudrate_combox) / sizeof(COMBOX_LIST)); i++)
+    {
+        if(initData->baudrate == baudrate_combox[i].value)
+        {
+            ui->comboBox_baudrate->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(uint32_t i = 0; i < (sizeof(parity_combox) / sizeof(COMBOX_LIST)); i++)
+    {
+        if(initData->parity == parity_combox[i].value)
+        {
+            ui->comboBox_parity->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(uint32_t i = 0; i < (sizeof(dataBits_combox) / sizeof(COMBOX_LIST)); i++)
+    {
+        if(initData->databits == dataBits_combox[i].value)
+        {
+            ui->comboBox_dataBits->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(uint32_t i = 0; i < (sizeof(stopBits_combox) / sizeof(COMBOX_LIST)); i++)
+    {
+        if(initData->stopbits == stopBits_combox[i].value)
+        {
+            ui->comboBox_stopBits->setCurrentIndex(i);
+            break;
+        }
+    }
+
+    for(uint32_t i = 0; i < (sizeof(flowType_combox) / sizeof(COMBOX_LIST)); i++)
+    {
+        if(initData->flowtype == flowType_combox[i].value)
+        {
+            ui->comboBox_flowControl->setCurrentIndex(i);
+            break;
+        }
+    }
+}
+
+void SerialDebugWidget::loadSettingFromIniFile()
+{
+    // Init default setting value
+    initDefaultCOMSetting();
+
+    QMutexLocker locker(&m_mutex);
+
+    QString comStr = m_title;
+    memset((char *)comInitData, 0, sizeof(struct COM_PORT_INIT_DATA));
+
+    currentSetting->beginGroup(comStr.append("ComSetting"));
+
+    QString portName = currentSetting->value("Port").toString();
+    memcpy(comInitData->port, portName.toLatin1().data(), portName.toLatin1().length());
+
+    switch(currentSetting->value("BaudRate").toInt())
+    {
+    case 9600:
+        comInitData->baudrate = BAUD9600;
+        break;
+    case 19200:
+        comInitData->baudrate = BAUD19200;
+        break;
+    case 38400:
+        comInitData->baudrate = BAUD38400;
+        break;
+    case 57600:
+        comInitData->baudrate = BAUD57600;
+        break;
+    case 115200:
+        comInitData->baudrate = BAUD115200;
+        break;
+    default:
+        comInitData->baudrate = BAUD115200;
+        break;
+    }
+
+    switch(currentSetting->value("StopBits").toInt())
+    {
+    case 1:
+        comInitData->stopbits = STOP_1;
+        break;
+    case 2:
+        comInitData->stopbits = STOP_2;
+        break;
+    default:
+        comInitData->stopbits = STOP_1;
+        break;
+    }
+
+    switch(currentSetting->value("DataBits").toInt())
+    {
+    case 5:
+        comInitData->databits = DATA_5;
+        break;
+    case 6:
+        comInitData->databits = DATA_6;
+        break;
+    case 7:
+        comInitData->databits = DATA_7;
+        break;
+    case 8:
+        comInitData->databits = DATA_8;
+        break;
+    default:
+        comInitData->databits = DATA_8;
+        break;
+    }
+
+    if(currentSetting->value("Parity").toString() == "None")
+    {
+        comInitData->parity = PAR_NONE;
+    }
+    else if(currentSetting->value("Parity").toString() == "Odd")
+    {
+        comInitData->parity = PAR_ODD;
+    }
+    else if(currentSetting->value("Parity").toString() == "Even")
+    {
+        comInitData->parity = PAR_EVEN;
+    }
+    else
+    {
+        comInitData->parity = PAR_NONE;
+    }
+
+    if(currentSetting->value("FlowControl").toString() == "None")
+    {
+        comInitData->flowtype = FLOW_OFF;
+    }
+    else if(currentSetting->value("FlowControl").toString() == "Hardware")
+    {
+        comInitData->flowtype = FLOW_HARDWARE;
+    }
+    else if(currentSetting->value("FlowControl").toString() == "XonXoff")
+    {
+        comInitData->flowtype = FLOW_XONXOFF;
+    }
+    else
+    {
+        comInitData->flowtype = FLOW_OFF;
+    }
+
+    currentSetting->endGroup();
+
+    // Update UIs
+    updateComUI(comInitData);
+}
+
+void SerialDebugWidget::initDefaultCOMSetting()
+{
+    QMutexLocker locker(&m_mutex);
+
+    QString comStr = m_title;
+    currentSetting->beginGroup(comStr.append("ComSetting"));
+
+    if(!currentSetting->contains("Port"))
+    {
+        // Init the default value
+        currentSetting->setValue("Port", "COM1");
+    }
+
+    if(!currentSetting->contains("BaudRate"))
+    {
+        // Init the default value
+        currentSetting->setValue("BaudRate", 115200);
+    }
+
+    if(!currentSetting->contains("StopBits"))
+    {
+        // Init the default value
+        currentSetting->setValue("StopBits", 1);
+    }
+
+    if(!currentSetting->contains("DataBits"))
+    {
+        // Init the default value
+        currentSetting->setValue("DataBits", 8);
+    }
+
+    if(!currentSetting->contains("Parity"))
+    {
+        // Init the default value
+        currentSetting->setValue("Parity", "None");
+    }
+
+    if(!currentSetting->contains("FlowControl"))
+    {
+        // Init the default value
+        currentSetting->setValue("FlowControl", "None");
+    }
+
+    currentSetting->endGroup();
+}
+
+void SerialDebugWidget::updateSettingToFile()
+{
+    QMutexLocker locker(&m_mutex);
+
+    QString comStr = m_title;
+    currentSetting->beginGroup(comStr.append("ComSetting"));
+
+    currentSetting->setValue("Port", ui->comboBox_port->currentText());
+    currentSetting->setValue("BaudRate", ui->comboBox_baudrate->currentText());
+    currentSetting->setValue("StopBits", ui->comboBox_stopBits->currentText());
+    currentSetting->setValue("DataBits", ui->comboBox_dataBits->currentText());
+    currentSetting->setValue("Parity", ui->comboBox_parity->currentText());
+    currentSetting->setValue("FlowControl", ui->comboBox_flowControl->currentText());
+
+    currentSetting->endGroup();
+}
+
+void SerialDebugWidget::on_checkBox_showTx_clicked(bool checked)
+{
+    showTxPacketFlag = checked;
+}
+
+void SerialDebugWidget::on_checkBox_showRx_clicked(bool checked)
+{
+    showRxPacketFlag = checked;
 }

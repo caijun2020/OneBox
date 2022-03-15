@@ -22,8 +22,7 @@ class QSerialPort : public QThread
 {
     Q_OBJECT
 public:
-    QSerialPort(struct COM_PORT_INIT_DATA *initData);
-    QSerialPort();
+    QSerialPort(struct COM_PORT_INIT_DATA *initData = NULL);
     virtual ~QSerialPort();
 
     void run();
@@ -43,7 +42,7 @@ public:
     void setStopBits(StopBitsType stopbits);
     void setFlowControl(FlowType flowtype);
 
-    QStringList getAvailablePorts();
+    static QStringList getAvailablePorts();
 
     uint32_t getTotalTxBytes() const;
     uint32_t getTotalRxBytes() const;
@@ -54,7 +53,11 @@ public:
     bool getUndealData(uint8_t *dataP, uint32_t &len);
     bool getUndealData(QByteArray &data);
 
+    // Emit signal to notify status
+    void notifyStatusChanged();
+
 signals:
+    void statusChanged(struct  COM_PORT_INIT_DATA *);
     void newDataReady(QByteArray);
     void newDataTx(QByteArray);
     void startPolling();
@@ -85,12 +88,14 @@ private:
     uint32_t txTotalBytesSize;
     uint32_t rxTotalBytesSize;
 
+    int pollTimeInMs;   // Polling interval in millisecond
+
     void init();     // Init Serial Port
     void deInit();   // Release/DeInit Serial Port
 
 #ifdef Q_OS_WIN
     // Get com port info from register
-    QString getComInfoFromReg(int index, QString keyorvalue);
+    static QString getComInfoFromReg(int index, QString keyorvalue);
 #endif
 
 };

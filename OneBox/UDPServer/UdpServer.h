@@ -14,6 +14,7 @@ PURPOSE:        UDP Server interface
 #include <QHostAddress>
 #include <QList>
 #include <QMutex>
+#include <QTimer>
 
 #include "FifoBuffer.h"
 
@@ -56,11 +57,22 @@ public:
     uint32_t getTotalTxBytes() const;
     uint32_t getTotalRxBytes() const;
 
+    // Reset Tx/Rx count
     void resetTxRxCnt();
 
+    // Get UPD running status
     bool getRunningStatus() const;
 
+    // Set packet lost check enabled/disabled
+    void setLostCheckEnabled(bool flag);
+
+    // Get packet lost check flag
+    bool getLostCheckFlag() const;
+
 signals:
+    void startConnectionCheck();
+    void stopConnectionCheck();
+
     void connectionIn(QString);
     void connectionOut(QString);
     void newDataReady(int);
@@ -68,7 +80,10 @@ signals:
     void newDataTx(QHostAddress, int, QByteArray);
     void message(const QString& info);
 
-    void serverChanged(QHostAddress address, uint16_t port);
+    void startListen();
+    void stopListen();
+
+    void serverChanged(QHostAddress address, int port);
     void connectionChanged(bool connected);
 
 private:
@@ -77,6 +92,11 @@ private:
     {
        QHostAddress address;
        uint16_t port;
+    };
+
+    enum
+    {
+        MAX_ERROR_CNT = 2
     };
 
     QUdpSocket *udpSocket;
@@ -99,6 +119,9 @@ private:
     QMutex mutex;   // Mutex lock
 
     bool isRunning;   // Flag to indicate server is running or not
+    QTimer *timerForCheck;  // Timer used to check connection lost
+    int lostCheckImMs;      // lost check period in ms
+    bool lostCheckEnabled;  // Flag used to enable/disable lost check
 
     // Add new client to list
     void addClientToList(QHostAddress address, uint16_t port);
@@ -111,6 +134,16 @@ private:
 
 private slots:
     void readPendingDatagrams();
+    void handleError(QAbstractSocket::SocketError errNo);
+    void startCheckTimer();    // Start check timer
+    void stopCheckTimer();    // Stop check timer
+    void lostConnectionCheck();
+
+    // Start socket
+    void startSocket();
+
+    // Stop/close socket
+    void stopSocket();
 };
 
 #endif // UDPSERVER_H

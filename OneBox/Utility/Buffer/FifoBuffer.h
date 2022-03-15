@@ -63,6 +63,7 @@ private:
     uint32_t *sizeIndex;
 
 
+    // Init buffer depth & size
     void init(uint32_t depth = FIFO_BUFFER_DEPTH, uint32_t size = FIFO_BUFFER_SIZE);
 
 };

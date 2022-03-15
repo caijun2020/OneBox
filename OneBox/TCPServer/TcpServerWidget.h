@@ -4,6 +4,8 @@
 #include <QWidget>
 #include <QTimer>
 #include <QSettings>
+#include <QMutex>
+
 #include "TcpServer.h"
 
 namespace Ui {
@@ -94,6 +96,7 @@ private slots:
 private:
     Ui::TcpServerWidget *ui;
 
+    QString m_settingFile;
     QSettings *currentSetting;  // Store current setting with ini file
 
     TCPServer *tcpServer;
@@ -111,6 +114,8 @@ private:
 
     bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
     bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
+
+    QMutex m_mutex; // Mutex
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

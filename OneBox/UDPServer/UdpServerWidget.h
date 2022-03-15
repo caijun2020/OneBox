@@ -13,6 +13,7 @@ PURPOSE:        UDP Server Widget UI
 #include <QTimer>
 #include <QHostAddress>
 #include <QSettings>
+#include <QMutex>
 
 #include "UdpServer.h"
 
@@ -107,6 +108,7 @@ private slots:
 private:
     Ui::UdpServerWidget *ui;
 
+    QString m_settingFile;
     QSettings *currentSetting;  // Store current setting with ini file
 
     UDPServer *udpServer;
@@ -124,6 +126,8 @@ private:
 
     bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
     bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
+    
+    QMutex m_mutex; // Mutex
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

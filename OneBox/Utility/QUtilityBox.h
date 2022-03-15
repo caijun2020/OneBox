@@ -19,6 +19,14 @@ public:
     QUtilityBox();
     virtual ~QUtilityBox();
 
+    /*-----------------------------------------------------------------------
+    FUNCTION:		instance
+    PURPOSE:		Get a QUtilityBox instance
+    ARGUMENTS:		None
+    RETURNS:		Return a static QUtilityBox pointer
+    -----------------------------------------------------------------------*/
+    static QUtilityBox* instance();
+
     // Convert Hex QString to data buffer
     // For example, "12 34 56" to 0x12, 0x34, 0x56, return 3
     uint32_t convertHexStringToDataBuffer(uint8_t *convertedDataBuffer, const QString &inputStr);
@@ -59,6 +67,36 @@ public:
 
     static bool intLessThan(const QString &s1, const QString &s2);
     static bool fileNameLessThan(const QFileInfo &s1, const QFileInfo &s2);
+
+    // Get current date & time string
+    QString getCurrentDateTime();
+
+    // Return a QString of app run path
+    QString getAppDirPath();
+
+    /*-----------------------------------------------------------------------
+    FUNCTION:    swapUint16
+    PURPOSE:     Transform the endian of unsigned 16-bit value.
+    ARGUMENTS:   val [in] - unsigned 16-bit value.
+    RETURNS:     Unsigned 16-bit value with transformed endian.
+    -----------------------------------------------------------------------*/
+    uint16_t swapUint16(uint16_t val);
+
+    /*-----------------------------------------------------------------------
+    FUNCTION:    swapUint32
+    PURPOSE:     Transform the endian of unsigned 32-bit value.
+    ARGUMENTS:   val [in] - unsigned 32-bit value.
+    RETURNS:     Unsigned 32-bit value with transformed endian.
+    -----------------------------------------------------------------------*/
+    uint32_t swapUint32(uint32_t val);
+
+    /*-----------------------------------------------------------------------
+    FUNCTION:    swapUint64
+    PURPOSE:     Transform the endian of unsigned 64-bit value.
+    ARGUMENTS:   val [in] - unsigned 64-bit value.
+    RETURNS:     Unsigned 64-bit value with transformed endian.
+    -----------------------------------------------------------------------*/
+    uint64_t swapUint64(uint64_t val);
 };
 
 #endif // QUTILITYBOX_H

@@ -246,7 +246,7 @@
     </layout>
    </item>
    <item row="2" column="0">
-    <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,1">
+    <layout class="QHBoxLayout" name="horizontalLayout_14" stretch="1,1,1">
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_11">
        <item>
@@ -301,7 +301,34 @@
       </layout>
      </item>
      <item>
+      <spacer name="horizontalSpacer">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+     <item>
       <layout class="QHBoxLayout" name="horizontalLayout_7">
+       <item>
+        <widget class="QCheckBox" name="checkBox_showTx">
+         <property name="text">
+          <string>Show Tx</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QCheckBox" name="checkBox_showRx">
+         <property name="text">
+          <string>Show Rx</string>
+         </property>
+        </widget>
+       </item>
        <item>
         <widget class="QCheckBox" name="checkBox_timeStamp">
          <property name="sizePolicy">

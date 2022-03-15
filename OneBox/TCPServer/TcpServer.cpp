@@ -163,12 +163,16 @@ void TCPServer::stopListen()
     emit connectionChanged(isRunning);
 }
 
-uint32_t TCPServer::getListenPort() const
+uint16_t TCPServer::getListenPort() const
 {
+    uint16_t ret = 0;
+
     if(tcpServer->isListening())
     {
-        return listenPort;
+        ret = listenPort;
     }
+
+    return ret;
 }
 
 QHostAddress TCPServer::getHostAddress() const

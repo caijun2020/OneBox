@@ -34,7 +34,7 @@ MainWindow::MainWindow(QWidget *parent) :
     this->setWindowTitle(tr("All in One ToolBox"));
 
     // Set Menu Bar Version Info
-    ui->menuVersion->addAction("V1.0 2021-Dec-10");
+    ui->menuVersion->addAction("V1.0 2022-Mar-15");
 }
 
 MainWindow::~MainWindow()

@@ -14,53 +14,50 @@ PURPOSE:        UDP Client interface
 
 UDPClient::UDPClient(QObject *parent) :
     QThread(parent),
-    udpSocket(new QUdpSocket),
+    udpSocket(NULL),
     fifoBuf(new FIFOBuffer),
     isRunning(false)
 {
     resetTxRxCnt();
+
+    connect(this, SIGNAL(startListen()), this, SLOT(startSocket()));
+    connect(this, SIGNAL(stopListen()), this, SLOT(stopSocket()));
 }
 
 UDPClient::~UDPClient()
 {
-  delete udpSocket;
-  delete fifoBuf;
+    if(NULL != udpSocket)
+    {
+        delete udpSocket;
+        udpSocket = NULL;
+    }
+
+    delete fifoBuf;
 }
 
 void UDPClient::run()
 {
-  while(1)
-  {
-      usleep( 1 );
-  }
+    while(1)
+    {
+        usleep( 1 );
+    }
 
-  exec();
+    exec();
 }
 
 void UDPClient::initSocket(const QHostAddress &address, uint16_t port)
 {
-    // If socket is already bind, need to close socket, then bind again
-    closeSocket();
-
+    localAddr = address;
     localPort = port;
 
-    udpSocket->bind(address, port, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
-    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
-
-    isRunning = true;
-
-    // Emit signal connected to server
-    emit connectionChanged(isRunning);
+    // Emit signal
+    emit startListen();
 }
 
 void UDPClient::closeSocket()
 {
-    udpSocket->close();
-
-    isRunning = false;
-
-    // Emit signal disconnection
-    emit connectionChanged(isRunning);
+    // Emit signal
+    emit stopListen();
 }
 
 void UDPClient::sendData(QHostAddress &address, uint16_t port, const char *data, uint32_t len)
@@ -79,13 +76,14 @@ void UDPClient::sendData(QHostAddress &address, uint16_t port, const char *data,
     hostAddr = address;
     serverPort = port;
 
-    txPacketCnt++;
-    txTotalBytesSize += len;
+    if(udpSocket->writeDatagram(data, len, address, port) >= 0)
+    {
+        txPacketCnt++;
+        txTotalBytesSize += len;
 
-    udpSocket->writeDatagram(data, len, address, port);
-
-    // Emit signal
-    emit newDataTx(address, port, QByteArray(data, len));
+        // Emit signal
+        emit newDataTx(address, port, QByteArray(data, len));
+    }
 }
 
 void UDPClient::sendData(QHostAddress &address, uint16_t port, QByteArray &data)
@@ -123,7 +121,6 @@ void UDPClient::sendData(QByteArray &data)
 
 void UDPClient::readPendingDatagrams()
 {
-    qDebug() << "readPendingDatagrams()";
     while (udpSocket->hasPendingDatagrams())
     {
         QByteArray temp;
@@ -143,6 +140,7 @@ void UDPClient::readPendingDatagrams()
 
             // Emit signal
             emit newDataReady();
+            emit newDataReady(0, temp);
 
 #ifdef UDP_CLIENT_DEBUG_TRACE
             QString ipPortStr;
@@ -261,4 +259,36 @@ void UDPClient::resetTxRxCnt()
 bool UDPClient::getRunningStatus() const
 {
     return isRunning;
+}
+
+void UDPClient::startSocket()
+{
+    // If socket is already bind, need to close socket, then bind again
+    stopSocket();
+
+    udpSocket = new QUdpSocket;
+    udpSocket->bind(localAddr, localPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+
+    isRunning = true;
+
+    // Emit signal
+    emit connectionChanged(isRunning);
+}
+
+void UDPClient::stopSocket()
+{
+    if(NULL != udpSocket)
+    {
+        udpSocket->close();
+
+        disconnect(udpSocket, 0, this, 0);
+        delete udpSocket;
+        udpSocket = NULL;
+    }
+
+    isRunning = false;
+
+    // Emit signal
+    emit connectionChanged(isRunning);
 }

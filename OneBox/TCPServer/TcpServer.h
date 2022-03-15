@@ -35,7 +35,7 @@ public:
     // Stop listen
     void stopListen();
 
-    uint32_t getListenPort() const;
+    uint16_t getListenPort() const;
     QHostAddress getHostAddress() const;
 
     // Return the count of clients connected to the server

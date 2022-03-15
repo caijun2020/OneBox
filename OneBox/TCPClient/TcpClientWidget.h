@@ -12,6 +12,7 @@ PURPOSE:        TCP Client Widget UI
 #include <QWidget>
 #include <QTimer>
 #include <QSettings>
+#include <QMutex>
 
 #include "TcpClient.h"
 
@@ -96,6 +97,7 @@ private slots:
 private:
     Ui::TcpClientWidget *ui;
 
+    QString m_settingFile;
     QSettings *currentSetting;  // Store current setting with ini file
 
     TCPClient *tcpClient;
@@ -113,6 +115,8 @@ private:
 
     bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
     bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
+
+    QMutex m_mutex; // Mutex
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

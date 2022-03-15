@@ -12,6 +12,8 @@ PURPOSE:        UDP Client Widget UI
 #include <QWidget>
 #include <QTimer>
 #include <QSettings>
+#include <QMutex>
+
 #include "UdpClient.h"
 
 
@@ -95,6 +97,7 @@ private slots:
 private:
     Ui::UdpClientWidget *ui;
 
+    QString m_settingFile;
     QSettings *currentSetting;  // Store current setting with ini file
 
     UDPClient *udpClient;
@@ -113,6 +116,8 @@ private:
 
     bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
     bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
+
+    QMutex m_mutex; // Mutex
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

@@ -10,23 +10,38 @@ PURPOSE:        UDP Server interface
 #include <QMutexLocker>
 #include <QDebug>
 
-#undef UDP_SERVER_DEBUG_TRACE
+//#define UDP_SERVER_DEBUG_TRACE
 
 UDPServer::UDPServer(QObject *parent) :
     QThread(parent),
-    udpSocket(new QUdpSocket),
-    fifoBuf(new FIFOBuffer),
+    udpSocket(NULL),
+    fifoBuf(new FIFOBuffer(8000, 1500)),
     txPacketCnt(0),
     rxPacketCnt(0),
     txTotalBytesSize(0),
     rxTotalBytesSize(0),
-    isRunning(false)
+    isRunning(false),
+    timerForCheck(NULL),
+    lostCheckImMs(500),
+    lostCheckEnabled(false)
 {
+    // Register data type to remove warning while running
+    qRegisterMetaType<QAbstractSocket::SocketError>("SocketError");
+
+    connect(this, SIGNAL(startConnectionCheck()), this, SLOT(startCheckTimer()));
+    connect(this, SIGNAL(stopConnectionCheck()), this, SLOT(stopCheckTimer()));
+    connect(this, SIGNAL(startListen()), this, SLOT(startSocket()));
+    connect(this, SIGNAL(stopListen()), this, SLOT(stopSocket()));
 }
 
 UDPServer::~UDPServer()
 {
-    delete udpSocket;
+    if(NULL != udpSocket)
+    {
+        delete udpSocket;
+        udpSocket = NULL;
+    }
+
     delete fifoBuf;
 }
 
@@ -45,28 +60,57 @@ void UDPServer::initSocket(const QHostAddress &address, uint16_t port)
     hostAddr = address;
     serverPort = port;
 
-	
-    // If socket is already bind, need to close socket, then bind again
-    closeSocket();
-
-    udpSocket->bind(hostAddr, serverPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
-    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
-	
-	isRunning = true;
-	
-	// Emit signal
+    // Emit signal
     emit serverChanged(hostAddr, serverPort);
-	emit connectionChanged(isRunning);	
+    emit startListen();
+
 }
 
 void UDPServer::closeSocket()
 {
-    udpSocket->close();
-	
-	isRunning = false;
+    // Emit signal
+    emit stopListen();
+}
+
+void UDPServer::startSocket()
+{
+    // If socket is already bind, need to close socket, then bind again
+    stopSocket();
+
+    // As there is the same mutex lock in stopSocket(), can not place locker before stopSocket()
+    // Need to wait until lock released
+    QMutexLocker locker(&mutex);
+
+    udpSocket = new QUdpSocket;
+    udpSocket->bind(hostAddr, serverPort, QUdpSocket::ShareAddress | QUdpSocket::ReuseAddressHint);
+    connect(udpSocket, SIGNAL(readyRead()), this, SLOT(readPendingDatagrams()));
+    connect(udpSocket, SIGNAL(error(QAbstractSocket::SocketError)), this, SLOT(handleError(QAbstractSocket::SocketError)));
+
+    isRunning = true;
 
     // Emit signal
     emit connectionChanged(isRunning);
+    emit startConnectionCheck();
+}
+
+void UDPServer::stopSocket()
+{
+    QMutexLocker locker(&mutex);
+
+    if(NULL != udpSocket)
+    {
+        udpSocket->close();
+
+        disconnect(udpSocket, 0, this, 0);
+        delete udpSocket;
+        udpSocket = NULL;
+    }
+
+    isRunning = false;
+
+    // Emit signal
+    emit connectionChanged(isRunning);
+    emit stopConnectionCheck();
 }
 
 void UDPServer::readPendingDatagrams()
@@ -76,7 +120,11 @@ void UDPServer::readPendingDatagrams()
         QByteArray temp;
         temp.resize(udpSocket->pendingDatagramSize());
 
-        udpSocket->readDatagram(temp.data(), temp.size(), &clientAddr, &clientPort);
+        int rxLen = udpSocket->readDatagram(temp.data(), temp.size(), &clientAddr, &clientPort);
+        if(rxLen != temp.size())
+        {
+            qDebug() << "readDatagram length != pendingDatagramSize() rxLen=" << rxLen;
+        }
 
         // If client is new, add it to list
         addClientToList(clientAddr, clientPort);
@@ -119,6 +167,17 @@ void UDPServer::readPendingDatagrams()
 #endif
         }
     }
+}
+
+void UDPServer::handleError(QAbstractSocket::SocketError errNo)
+{
+    QString logStr;
+
+    logStr = QString("UDPServer::Error Code = %1").arg(errNo);
+    qDebug() << logStr;
+
+    logStr = QString("UDPServer::Error string = %1").arg(udpSocket->errorString());
+    qDebug() << logStr;
 }
 
 uint32_t UDPServer::getServerPort() const
@@ -182,7 +241,7 @@ void UDPServer::sendData(uint32_t clientIndex, const char *data, uint32_t len)
 {
     if(clientIndex >= (uint32_t)clientList.size())
     {
-        qDebug("clientIndex %d is out of connections", clientIndex);
+        //qDebug("clientIndex %d is out of connections", clientIndex);
         return;
     }
 
@@ -196,6 +255,8 @@ void UDPServer::sendData(uint32_t clientIndex, QByteArray &data)
 
 void UDPServer::sendData(QHostAddress &address, uint16_t port, const char *data, uint32_t len)
 {
+    QMutexLocker locker(&mutex);
+
     if(NULL == data || 0 == len)
     {
         return;
@@ -207,13 +268,14 @@ void UDPServer::sendData(QHostAddress &address, uint16_t port, const char *data,
         return;
     }
 
-    txPacketCnt++;
-    txTotalBytesSize += len;
+    if(udpSocket->writeDatagram(data, len, address, port) >= 0)
+    {
+        txPacketCnt++;
+        txTotalBytesSize += len;
 
-    udpSocket->writeDatagram(data, len, address, port);
-
-    // Emit signal
-    emit newDataTx(address, port, QByteArray(data, len));
+        // Emit signal
+        emit newDataTx(address, port, QByteArray(data, len));
+    }
 }
 
 void UDPServer::sendData(QHostAddress &address, uint16_t port, QByteArray &data)
@@ -328,7 +390,78 @@ void UDPServer::resetTxRxCnt()
     rxTotalBytesSize = 0;
 }
 
+void UDPServer::startCheckTimer()
+{
+    stopCheckTimer();
+
+    if(lostCheckEnabled)
+    {
+        timerForCheck = new QTimer;
+        connect(timerForCheck, SIGNAL(timeout()), this, SLOT(lostConnectionCheck()));
+        timerForCheck->start(lostCheckImMs);  //timeOut = 1s
+    }
+}
+
+void UDPServer::stopCheckTimer()
+{
+    if(NULL != timerForCheck)
+    {
+        timerForCheck->stop();
+        disconnect(timerForCheck, 0, this, 0);
+        delete timerForCheck;
+        timerForCheck = NULL;
+    }
+}
+
+void UDPServer::lostConnectionCheck()
+{
+    static uint32_t oldRxCnt = 0;
+    static uint32_t errCnt = 0;
+    uint32_t newRxCnt = 0;
+
+    QString logStr = "UDPServer::lostConnectionCheck() initSocket again";
+
+    if(isRunning)
+    {
+        newRxCnt = getRxDiagramCnt();
+
+        if(newRxCnt <= oldRxCnt)
+        {
+            if(++errCnt >= MAX_ERROR_CNT)
+            {
+                errCnt = 0;
+
+                // Update log
+                qDebug() << logStr;
+
+                // Emit signal to initSocket again
+                emit startListen();
+
+                // Mask initSocket, call readPendingDatagrams() to read data from buffer
+                // Then signal readyRead() may received normally!
+                //readPendingDatagrams();
+            }
+        }
+        else
+        {
+            errCnt = 0;
+        }
+
+        oldRxCnt = newRxCnt;
+    }
+}
+
 bool UDPServer::getRunningStatus() const
 {
     return isRunning;
+}
+
+void UDPServer::setLostCheckEnabled(bool flag)
+{
+    lostCheckEnabled = flag;
+}
+
+bool UDPServer::getLostCheckFlag() const
+{
+    return lostCheckEnabled;
 }

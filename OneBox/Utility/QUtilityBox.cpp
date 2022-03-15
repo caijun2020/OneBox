@@ -11,6 +11,8 @@ PURPOSE:        General tool box, provide buffer convert function and etc.
 #include <QRegExp>
 #include <QDir>
 #include <QFileInfo>
+#include <QDateTime>
+#include <QApplication>
 #include <QDebug>
 
 QUtilityBox::QUtilityBox()
@@ -19,6 +21,12 @@ QUtilityBox::QUtilityBox()
 
 QUtilityBox::~QUtilityBox()
 {
+}
+
+QUtilityBox* QUtilityBox::instance()
+{
+    static QUtilityBox singleton;
+    return &singleton;
 }
 
 uint32_t QUtilityBox::convertHexStringToDataBuffer(uint8_t *convertedDataBuffer, const QString &inputStr)
@@ -279,4 +287,36 @@ bool QUtilityBox::cutFileToPath(QString srcFile, QString dstFile, bool coverFile
     }
 
     return ret;
+}
+
+QString QUtilityBox::getCurrentDateTime()
+{
+    QDateTime time = QDateTime::currentDateTime();
+    QString timeStr = time.toString("yyyy-MM-dd hh:mm:ss:zzz");
+
+    return timeStr;
+}
+
+QString QUtilityBox::getAppDirPath()
+{
+    QString ret = QCoreApplication::applicationDirPath().append("/");
+    return ret;
+}
+
+uint16_t QUtilityBox::swapUint16(uint16_t val)
+{
+  return (val << 8) | (val >> 8);
+}
+
+uint32_t QUtilityBox::swapUint32(uint32_t val)
+{
+  val = ((val << 8) & 0xFF00FF00) | ((val >> 8) & 0x00FF00FF);
+  return (val << 16) | (val >> 16);
+}
+
+uint64_t QUtilityBox::swapUint64(uint64_t val)
+{
+  val = ((val << 8)  & 0xFF00FF00FF00FF00ULL) | ((val >> 8)  & 0x00FF00FF00FF00FFULL);
+  val = ((val << 16) & 0xFFFF0000FFFF0000ULL) | ((val >> 16) & 0x0000FFFF0000FFFFULL);
+  return (val << 32) | (val >> 32);
 }

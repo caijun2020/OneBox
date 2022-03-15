@@ -1,12 +1,16 @@
 #include "FifoBuffer.h"
 #include <string.h>
-//#include <QDebug>
+
+//#define FIFO_BUFFER_DEBUG_TRACE
+
+#ifdef FIFO_BUFFER_DEBUG_TRACE
+#include <QDebug>
+#endif
 
 FIFOBuffer::FIFOBuffer(uint32_t depth, uint32_t size) :
     bufferPushIndex(0),
     bufferPopIndex(0)
 {
-
     // Init Buffer
     init(depth, size);
 }
@@ -48,7 +52,9 @@ bool FIFOBuffer::pushData(const char *dataP, uint32_t len)
 
     ret = true;
 
-    //qDebug() << "pushData bufferPushIndex = " << bufferPushIndex << "len = " << len;
+#ifdef FIFO_BUFFER_DEBUG_TRACE
+    qDebug() << "pushData() bufferPushIndex = " << bufferPushIndex << "len = " << len;
+#endif
 
     return ret;
 }
@@ -69,7 +75,9 @@ bool FIFOBuffer::popData(char *dataP, uint32_t &len)
         len = 0;
         ret = false;
 
-        //qDebug() << "popData no data, bufferPopIndex = " << bufferPopIndex;
+#ifdef FIFO_BUFFER_DEBUG_TRACE
+        qDebug() << "popData() no data, bufferPopIndex = " << bufferPopIndex;
+#endif
 
         return ret;
     }
@@ -89,7 +97,9 @@ bool FIFOBuffer::popData(char *dataP, uint32_t &len)
 
     ret = true;
 
-    //qDebug() << "popData bufferPopIndex = " << bufferPopIndex << "len = " << len;
+#ifdef FIFO_BUFFER_DEBUG_TRACE
+    qDebug() << "popData() bufferPopIndex = " << bufferPopIndex << "len = " << len;
+#endif
 
     return ret;
 }
@@ -102,6 +112,11 @@ void FIFOBuffer::init(uint32_t depth, uint32_t size)
         return;
     }
 
+    // Reset push&pop index
+    bufferPushIndex = 0;
+    bufferPopIndex = 0;
+
+    // Set buffer depth & size
     bufferDepth = depth;
     bufferSize = size;
 

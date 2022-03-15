@@ -1,8 +1,17 @@
+/**********************************************************************
+PACKAGE:        Log
+FILE:           FileLog.cpp
+COPYRIGHT (C):  All rights reserved.
+
+PURPOSE:        Write log to a file
+**********************************************************************/
+
 #include "FileLog.h"
 #include <QDateTime>
 #include <QTime>
 #include <QFile>
 #include <QTextStream>
+#include <QDir>
 #include <QDebug>
 
 FileLog::FileLog()
@@ -41,12 +50,21 @@ bool FileLog::addLogToFile(QString logStr)
 
 bool FileLog::addLogToFile(const char* logStr, int len)
 {
-    bool ret = false;
-    return ret;
+    QByteArray logArray(logStr, len);
+
+    return addLogToFile(QString(logArray));
 }
 
 void FileLog::setLogPath(QString newLogPath)
 {
     logRootPath.clear();
     logRootPath.append(newLogPath);
+
+    QDir dir;
+
+    // If the folder not exist, create it
+    if(!dir.exists(logRootPath))
+    {
+        dir.mkpath(logRootPath);
+    }
 }

@@ -2,6 +2,19 @@
 A toolbox software provides serial port, TCP server/client, UDP server/client functions based on Qt4.
 
 
+V1.0 2022-Mar-15
+1. Update class QUtilityBox, FIFOBuffer, FileLog and QtBaseType.h in Utility
+2. Add Show Tx/Rx checkbox in class SerialDebugWidget
+3. Add QMutex m_mutex in class UdpServerWidget/UdpClientWidget/TcpServerWidget/TcpClientWidget,
+when read/write ini file with QMutexLocker, prepend the exe absolute path for config.ini
+4. Update sendData() in class TcpClient, only write successfully then emit signal newDataTx()
+5. Update class win_qextserialport.cpp to get rid of compile warning
+6. Update class UDPServer/UDPClient, add signal startListen() and stopListen() to start socket for multi-thread programming
+7. Update class TCPServer, change uint32_t getListenPort() to uint16_t getListenPort(), get rid of compile warning
+8. Update class QSerialPort, add signal statusChanged(struct  COM_PORT_INIT_DATA *) to notice UI widget
+9. Update UI class SerialDebugWidget, add Show Tx/Rx checkbox, add ini setting operation, add QMutex when read/write ini file
+ 
+
 V1.0 2021-Dec-10
 1. Add Show Tx/Rx checkbox in class TcoClientWidget/TcpServerWidget/UdpServerWidget/UdpClientWidget
 

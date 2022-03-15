@@ -23,18 +23,15 @@ PURPOSE:        Serial Port interface based on QextSerialBase
 
 QSerialPort::QSerialPort(COM_PORT_INIT_DATA *initData) :
     comPort(NULL),
-    timerForRx(NULL)
+    timerForRx(NULL),
+    pollTimeInMs(50)
 {
     init();
 
-    open(initData);
-}
-
-QSerialPort::QSerialPort() :
-    comPort(NULL),
-    timerForRx(NULL)
-{
-    init();
+    if(NULL != initData)
+    {
+        open(initData);
+    }
 }
 
 QSerialPort::~QSerialPort()
@@ -53,6 +50,8 @@ void QSerialPort::init()
     resetTxRxCnt();
 
     comInitData = new struct COM_PORT_INIT_DATA;
+    // Clear init data struct
+    memset(comInitData, 0, sizeof(struct COM_PORT_INIT_DATA));
 
     // Init Tx buffer
     txBuffer = new char [TX_BUF_SIZE];
@@ -62,25 +61,20 @@ void QSerialPort::init()
     rxLoopBuffer = new LoopBuffer(RX_BUF_SIZE);
     //rxLoopBuffer->setMsgEndChar(MSG_END_FLAG_1);
 
+    // Connect signal and slot
     connect(this, SIGNAL(startPolling()), this, SLOT(startPollingTimer()));
     connect(this, SIGNAL(stopPolling()), this, SLOT(stopPollingTimer()));
 }
 
 void QSerialPort::deInit()
 {
-    if(NULL != timerForRx)
-    {
-        timerForRx->stop();
-        delete timerForRx;
-        timerForRx = NULL;
-    }
-
     if(comPort != NULL)
     {
         comPort->close();
+        delete comPort;
+        comPort = NULL;
     }
 
-    delete comPort;
     delete comInitData;
     delete []txBuffer;
     delete rxLoopBuffer;
@@ -91,6 +85,11 @@ bool QSerialPort::open(struct COM_PORT_INIT_DATA *initData)
     bool ret = false;
     QString portName = "";
 
+    if(NULL == initData)
+    {
+        return ret;
+    }
+
     // Load COM port setting
     memcpy(comInitData, initData, sizeof(struct COM_PORT_INIT_DATA));
 
@@ -98,11 +97,11 @@ bool QSerialPort::open(struct COM_PORT_INIT_DATA *initData)
     memset(txBuffer, 0, TX_BUF_SIZE);
 
     portName.append(comInitData->port);
-    portName.prepend("\\\\.\\");   // Which is used to open the port number >= COM10
 
     close();
 
 #ifdef Q_OS_WIN
+    portName.prepend("\\\\.\\");   // Which is used to open the port number >= COM10
     comPort = new Win_QextSerialPort(portName, QextSerialBase::Polling); // Polling Mode
 #else
     comPort = new Posix_QextSerialPort(portName, QextSerialBase::Polling); // Polling Mode
@@ -123,6 +122,9 @@ bool QSerialPort::open(struct COM_PORT_INIT_DATA *initData)
         emit startPolling();
     }
 
+    // Emit signal to notify status changed
+    notifyStatusChanged();
+
     return ret;
 }
 
@@ -135,6 +137,9 @@ void QSerialPort::close()
         comPort->close();
         delete comPort;
         comPort = NULL;
+
+        // Emit signal to notify status changed
+        notifyStatusChanged();
     }
 }
 
@@ -174,7 +179,7 @@ int QSerialPort::writeData(const char* txData, int len)
         }
         else
         {
-            qDebug() << "comPort not open";
+            //qDebug() << "comPort not open";
         }
     }
 
@@ -214,22 +219,24 @@ void QSerialPort::readDataFromCOM()
 
 void QSerialPort::startPollingTimer()
 {
-    if(NULL != timerForRx)
-    {
-        timerForRx->stop();
-        delete timerForRx;
-    }
+    stopPollingTimer();
+
+    QMutexLocker locker(&mutex);
 
     timerForRx = new QTimer();
     connect(timerForRx, SIGNAL(timeout()), this, SLOT(readDataFromCOM()));
-    timerForRx->start(50);  //timeOut = 50ms
+    timerForRx->start(pollTimeInMs);  //timeOut = 50ms
 }
 
 void QSerialPort::stopPollingTimer()
 {
+    QMutexLocker locker(&mutex);
+
     if(NULL != timerForRx)
     {
         timerForRx->stop();
+        delete timerForRx;
+        timerForRx = NULL;
     }
 }
 
@@ -406,4 +413,9 @@ bool QSerialPort::getUndealData(QByteArray &data)
     }
 
     return ret;
+}
+
+void QSerialPort::notifyStatusChanged()
+{
+    emit statusChanged(comInitData);
 }

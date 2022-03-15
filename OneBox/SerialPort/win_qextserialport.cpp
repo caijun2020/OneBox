@@ -430,6 +430,7 @@ only prints a warning message to that effect.
 */
 void Win_QextSerialPort::ungetChar(char c) {
 
+    Q_UNUSED(c);
     /*meaningless on unbuffered sequential device - return error and print a warning*/
     TTY_WARNING("Win_QextSerialPort: ungetChar() called on an unbuffered sequential device - operation is meaningless");
 }
@@ -947,6 +948,7 @@ ulong Win_QextSerialPort::lineStatus(void) {
 
 bool Win_QextSerialPort::waitForReadyRead(int msecs)
 {
+    Q_UNUSED(msecs);
 	//@todo implement
 	return false;
 }

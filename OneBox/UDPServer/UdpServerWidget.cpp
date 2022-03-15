@@ -18,6 +18,7 @@ PURPOSE:        UDP Server Widget UI
 UdpServerWidget::UdpServerWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::UdpServerWidget),
+    m_settingFile("config.ini"),
     udpServer(NULL),
     isRunning(false),
     hexFormatFlag(false),
@@ -31,8 +32,11 @@ UdpServerWidget::UdpServerWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Prepend the exe absolute path
+    m_settingFile.prepend(QUtilityBox::instance()->getAppDirPath());
+
     // Default setting file
-    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+    currentSetting = new QSettings(m_settingFile, QSettings::IniFormat);
 
     // Load Settings from ini file
     loadSettingFromIniFile();
@@ -129,7 +133,7 @@ void UdpServerWidget::initWidgetStyle()
 
     // Get host IP address
     //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
-    qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
+    //qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
@@ -140,6 +144,8 @@ void UdpServerWidget::initWidgetStyle()
 
 void UdpServerWidget::loadSettingFromIniFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("UDPServer");
 
     if(currentSetting->contains("IP"))
@@ -499,6 +505,8 @@ void UdpServerWidget::on_lineEdit_listenPort_editingFinished()
 
 void UdpServerWidget::updateSettingToFile()
 {
+    QMutexLocker locker(&m_mutex);
+
     currentSetting->beginGroup("UDPServer");
     currentSetting->setValue("IP", serverIP);
     currentSetting->setValue("Port", listenPort);

@@ -20,6 +20,7 @@ PURPOSE:        TCP Client Widget UI
 TcpClientWidget::TcpClientWidget(QWidget *parent) :
     QWidget(parent),
     ui(new Ui::TcpClientWidget),
+    m_settingFile("config.ini"),
     tcpClient(NULL),
     isRunning(false),
     hexFormatFlag(false),
@@ -33,8 +34,11 @@ TcpClientWidget::TcpClientWidget(QWidget *parent) :
 {
     ui->setupUi(this);
 
+    // Prepend the exe absolute path
+    m_settingFile.prepend(QUtilityBox::instance()->getAppDirPath());
+
     // Default setting file
-    currentSetting = new QSettings("config.ini", QSettings::IniFormat);
+    currentSetting = new QSettings(m_settingFile, QSettings::IniFormat);
 
     // Load Settings from ini file
     loadSettingFromIniFile();
@@ -119,7 +123,7 @@ void TcpClientWidget::initWidgetStyle()
 
     // Get host IP address
     //ui->lineEdit_IP->setText(QNetworkInterface().allAddresses().at(1).toString());
-    qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
+    //qDebug() << "All IP Address: " << QNetworkInterface().allAddresses();
 
     ui->checkBox_hex->setChecked(hexFormatFlag);
     ui->checkBox_autoClear->setChecked(autoClearRxFlag);
@@ -130,6 +134,8 @@ void TcpClientWidget::initWidgetStyle()
 
 void TcpClientWidget::loadSettingFromIniFile()
 {
+    QMutexLocker locker(&m_mutex);
+    
     currentSetting->beginGroup("TCPClient");
 
     if(currentSetting->contains("ServerIP"))
@@ -417,6 +423,8 @@ void TcpClientWidget::updateConnectionStatus(bool connected)
 
 void TcpClientWidget::updateSettingToFile()
 {
+    QMutexLocker locker(&m_mutex);
+    
     currentSetting->beginGroup("TCPClient");
     currentSetting->setValue("ServerIP", serverIP);
     currentSetting->setValue("ServerPort", serverPort);

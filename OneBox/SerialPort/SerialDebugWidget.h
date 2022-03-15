@@ -9,6 +9,8 @@ PURPOSE:        Serial Port Debug Widget UI
 #define SERIALDEBUGWIDGET_H
 
 #include <QWidget>
+#include <QSettings>
+#include <QMutex>
 #include "QSerialPort.h"
 
 namespace Ui {
@@ -92,9 +94,18 @@ private slots:
 
     void on_checkBox_hex_clicked(bool checked);
 
+    void updateConnectionStatus(struct COM_PORT_INIT_DATA *initData);
+
+    void on_checkBox_showTx_clicked(bool checked);
+
+    void on_checkBox_showRx_clicked(bool checked);
+
 private:
 
     Ui::SerialDebugWidget *ui;
+
+    QString m_settingFile;
+    QSettings *currentSetting;  // Store current setting with ini file
 
     QSerialPort *serialPort;    // COM port handler
     struct COM_PORT_INIT_DATA *comInitData; // COM port init data
@@ -107,8 +118,17 @@ private:
     bool hexFormatFlag; // This flag is used to enable hex format show
     bool autoClearRxFlag; // This flag is used to clear rx buffer automatically
 
-    QTimer refreshUITimer;  // Timer used to refresh tx/rx bytes
+    QTimer *refreshTimer;  // Timer used to refresh tx/rx bytes
+    int refreshInMs;
+
     QTimer autoSendTimer;   // Timer used to auto send data
+
+    QString m_title;
+
+    bool showTxPacketFlag;  // flag used to enable Tx packet display in log area
+    bool showRxPacketFlag;  // flag used to enable Rx packet display in log area
+
+    QMutex m_mutex; // Mutex
 
     void initWidgetFont();  // Init the Font type and size
     void initWidgetStyle(); // Init widget style
@@ -118,6 +138,18 @@ private:
 
     // Update Rx data in textBrowser
     void updateLogData(QString logStr);
+
+    // Init the default COM port setting if setting not exist in ini file
+    void initDefaultCOMSetting();
+
+    // Load setting from ini file
+    void loadSettingFromIniFile();
+
+    // Update setting to ini file
+    void updateSettingToFile();
+
+    // Update Com port UI(Port/Baudrate/Stopbits...)
+    void updateComUI(const struct COM_PORT_INIT_DATA *initData);
 };
 
 #endif // SERIALDEBUGWIDGET_H

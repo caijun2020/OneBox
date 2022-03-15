@@ -11,6 +11,7 @@ PURPOSE:        TCP Client interface
 #undef TCP_CLIENT_DEBUG_TRACE
 
 TCPClient::TCPClient(QObject *parent) :
+    QThread(parent),
     tcpClient(new QTcpSocket),
     fifoBuf(new FIFOBuffer),
     hostAddr(QHostAddress::Any),
@@ -88,7 +89,7 @@ void TCPClient::readError(QAbstractSocket::SocketError)
 {
     tcpClient->disconnectFromHost();
 
-    qDebug() << "failed to connect server : " << tcpClient->errorString();
+    qDebug() << "TCPClient::readError():" << tcpClient->errorString();
 }
 
 void TCPClient::removeConnection()
@@ -136,11 +137,11 @@ void TCPClient::disconnectFromServer()
     if (tcpClient->state() == QAbstractSocket::UnconnectedState ||
              tcpClient->waitForDisconnected(m_timeOutInMS))
     {
-        qDebug() << "disconnected successfully";
+        qDebug() << "TCPClient::disconnected successfully";
     }
     else
     {
-        qDebug() << tcpClient->errorString();
+        qDebug() << "TCPClient::disconnectFromServer() errorString =" << tcpClient->errorString();
     }
 }
 
@@ -198,15 +199,16 @@ bool TCPClient::sendData(const char *data, uint32_t len)
         return ret;
     }
 
-    txPacketCnt++;
-    txTotalBytesSize += len;
+    if(tcpClient->write((char *)data, len) >= 0)
+    {
+        txPacketCnt++;
+        txTotalBytesSize += len;
 
-    tcpClient->write((char *)data, len);
+        // Emit signal
+        emit newDataTx(hostAddr, listenPort, QByteArray(data, len));
 
-    // Emit signal
-    emit newDataTx(hostAddr, listenPort, QByteArray(data, len));
-
-    ret = true;
+        ret = true;
+    }
 
     return ret;
 }
