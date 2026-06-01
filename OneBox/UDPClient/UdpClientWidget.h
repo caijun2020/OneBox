@@ -55,6 +55,9 @@ public:
     -----------------------------------------------------------------------*/
     void sendData(QHostAddress address, uint16_t port, QByteArray &data);
 
+public slots:
+    void retranslateUI();
+
 protected:
     void resizeEvent(QResizeEvent *e);
 

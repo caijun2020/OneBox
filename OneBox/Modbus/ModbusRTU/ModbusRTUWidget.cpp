@@ -96,6 +96,11 @@ void ModbusRTUWidget::updateUI()
 {
 }
 
+void ModbusRTUWidget::retranslateUI()
+{
+    ui->retranslateUi(this);
+}
+
 void ModbusRTUWidget::loadSettingFromIniFile()
 {
     // Load Font type and size
@@ -187,7 +192,7 @@ bool ModbusRTUWidget::getModbusCommOk()
 void ModbusRTUWidget::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     // Add time stamp
     logStr.prepend(timeStr);
@@ -200,7 +205,7 @@ void ModbusRTUWidget::updateLogData(QString logStr)
 void ModbusRTUWidget::updateToUILog(QString logStr, bool timeStamp)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     if(timeStamp)
     {

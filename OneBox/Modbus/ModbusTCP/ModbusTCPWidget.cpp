@@ -133,6 +133,11 @@ void ModbusTCPWidget::updateUI()
 {
 }
 
+void ModbusTCPWidget::retranslateUI()
+{
+    ui->retranslateUi(this);
+}
+
 void ModbusTCPWidget::loadSettingFromIniFile()
 {
     QMutexLocker locker(&m_mutex);
@@ -458,7 +463,7 @@ void ModbusTCPWidget::updateLogData(QString logStr)
 void ModbusTCPWidget::updateToUILog(QString logStr, bool timeStamp)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     if(timeStamp)
     {

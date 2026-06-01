@@ -64,6 +64,11 @@ UdpClientWidget::~UdpClientWidget()
     delete refreshTimer;
 }
 
+void UdpClientWidget::retranslateUI()
+{
+    ui->retranslateUi(this);
+}
+
 void UdpClientWidget::resizeEvent(QResizeEvent *e)
 {
     Q_UNUSED(e);
@@ -213,7 +218,7 @@ void UdpClientWidget::on_pushButton_clear_clicked()
 void UdpClientWidget::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     // Add time stamp
     logStr.prepend(timeStr);

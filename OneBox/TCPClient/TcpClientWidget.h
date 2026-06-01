@@ -55,6 +55,9 @@ public:
     -----------------------------------------------------------------------*/
     void sendData(QByteArray &data);
 
+public slots:
+    void retranslateUI();
+
 signals:
     void newDataReady(QByteArray data);
 

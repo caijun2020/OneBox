@@ -733,7 +733,7 @@ void ModbusRTU:: startPeriodTxService()
 void ModbusRTU::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     // Add time stamp
     logStr.prepend(timeStr);

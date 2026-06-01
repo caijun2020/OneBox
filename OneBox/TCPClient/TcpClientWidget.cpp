@@ -63,6 +63,11 @@ TcpClientWidget::~TcpClientWidget()
     delete refreshTimer;
 }
 
+void TcpClientWidget::retranslateUI()
+{
+    ui->retranslateUi(this);
+}
+
 void TcpClientWidget::resizeEvent(QResizeEvent *e)
 {
     Q_UNUSED(e);
@@ -249,7 +254,7 @@ void TcpClientWidget::sendData(QByteArray &data)
 void TcpClientWidget::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     // Add time stamp
     logStr.prepend(timeStr);

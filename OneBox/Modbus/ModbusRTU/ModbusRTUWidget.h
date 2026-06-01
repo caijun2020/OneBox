@@ -65,6 +65,7 @@ signals:
 
 public slots:
     virtual void updateUI();
+    void retranslateUI();
 
 protected slots:
 

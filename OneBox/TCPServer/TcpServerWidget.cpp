@@ -52,6 +52,11 @@ TcpServerWidget::~TcpServerWidget()
     delete refreshTimer;
 }
 
+void TcpServerWidget::retranslateUI()
+{
+    ui->retranslateUi(this);
+}
+
 void TcpServerWidget::resizeEvent(QResizeEvent *e)
 {
     Q_UNUSED(e);
@@ -308,7 +313,7 @@ void TcpServerWidget::sendData(uint32_t clientIndex, const char *data, uint32_t 
 void TcpServerWidget::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     // Add time stamp
     logStr.prepend(timeStr);

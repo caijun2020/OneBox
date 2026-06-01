@@ -2,6 +2,11 @@
 A toolbox software provides serial port, TCP server/client, UDP server/client functions based on Qt4.
 
 
+V1.2 2026-Jun-01
+1. add public slot retranslateUI for class UdpServerWidget/UdpClientWidget/TcpServerWidget/TcpClientWidget/ModbusTCPWidget/ModbusRTUWidget
+2. Update the log timestamp format from yyyy-MM-dd hh:mm:ss:zzz to yyyy-MM-dd hh:mm:ss.zzz
+
+
 V1.1 2025-Jun-11
 1. Add class ModbusTCP and ModbusRTU
 

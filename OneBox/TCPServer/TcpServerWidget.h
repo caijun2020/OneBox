@@ -55,6 +55,9 @@ public:
     -----------------------------------------------------------------------*/
     void sendData(uint32_t clientIndex, const char *data, uint32_t len);
 
+public slots:
+    void retranslateUI();
+
 signals:
     void newDataReady(uint32_t clientIndex, QByteArray data);
 

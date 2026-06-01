@@ -414,7 +414,7 @@ void SerialDebugWidget::on_checkBox_hex_clicked(bool checked)
 void SerialDebugWidget::updateLogData(QString logStr)
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss:zzz] ");
+    QString timeStr = time.toString("[yyyy-MM-dd hh:mm:ss.zzz] ");
 
     if(timeStampFlag)
     {

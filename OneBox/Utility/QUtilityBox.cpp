@@ -292,7 +292,7 @@ bool QUtilityBox::cutFileToPath(QString srcFile, QString dstFile, bool coverFile
 QString QUtilityBox::getCurrentDateTime()
 {
     QDateTime time = QDateTime::currentDateTime();
-    QString timeStr = time.toString("yyyy-MM-dd hh:mm:ss:zzz");
+    QString timeStr = time.toString("yyyy-MM-dd hh:mm:ss.zzz");
 
     return timeStr;
 }

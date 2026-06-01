@@ -109,13 +109,13 @@ bool TCPClient::connectToServer(const QHostAddress &ip, uint16_t port)
 {
     bool ret = false;
 
+    hostAddr = ip;
+    listenPort = port;
     tcpClient->connectToHost(ip, port);
-    if (tcpClient->waitForConnected(m_timeOutInMS))
+
+    if(tcpClient->waitForConnected(m_timeOutInMS))
     {
         ret = true;
-        hostAddr = ip;
-        listenPort = port;
-
         isRunning = true;
 
         // Emit signals
@@ -134,7 +134,7 @@ bool TCPClient::connectToServer(QString ip, uint16_t port)
 void TCPClient::disconnectFromServer()
 {
     tcpClient->disconnectFromHost();
-    if (tcpClient->state() == QAbstractSocket::UnconnectedState ||
+    if(tcpClient->state() == QAbstractSocket::UnconnectedState ||
              tcpClient->waitForDisconnected(m_timeOutInMS))
     {
         qDebug() << "TCPClient::disconnected successfully";
@@ -251,4 +251,3 @@ bool TCPClient::getRunningStatus() const
 {
     return isRunning;
 }
-
