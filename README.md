@@ -2,6 +2,10 @@
 A toolbox software provides serial port, TCP server/client, UDP server/client functions based on Qt4.
 
 
+V1.1 2025-Jun-11
+1. Add class ModbusTCP and ModbusRTU
+
+
 V1.0 2022-Mar-15
 1. Update class QUtilityBox, FIFOBuffer, FileLog and QtBaseType.h in Utility
 2. Add Show Tx/Rx checkbox in class SerialDebugWidget

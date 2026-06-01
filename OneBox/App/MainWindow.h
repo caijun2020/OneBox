@@ -8,6 +8,8 @@
 #include "UdpServerWidget.h"
 #include "UdpClientWidget.h"
 #include "SerialDebugWidget.h"
+#include "ModbusTCPWidget.h"
+#include "ModbusRTUWidget.h"
 
 
 namespace Ui {
@@ -39,6 +41,8 @@ private:
         UDP_SERVER_TAB_INDEX,
         UDP_CLIENT_TAB_INDEX,
         SERIAL_TAB_INDEX,
+        MODBUS_TCP_TAB_INDEX,
+        MODBUS_RTU_TAB_INDEX,
         TAB_WIDGET_CNT
     };
 
@@ -51,6 +55,8 @@ private:
     UDPServer *m_udpServer;
     UDPClient *m_udpClient;
     QSerialPort *m_serialPort;
+    ModbusTCP *m_modbusTCP;
+    ModbusRTU *m_modbusRTU;
 
     // UIs
     TcpServerWidget *m_tcpServerW;
@@ -58,6 +64,9 @@ private:
     UdpServerWidget *m_udpServerW;
     UdpClientWidget *m_udpClientW;
     SerialDebugWidget *m_serialW;
+    ModbusTCPWidget *m_modbusTCPW;
+    ModbusRTUWidget *m_modbusRTUW;
+
 
     void initWidgetFont();  // Init the Font type and size of the widget
     void initWidgetStyle(); // Init Icon of the widget

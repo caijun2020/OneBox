@@ -148,10 +148,13 @@ void TCPServer::stopListen()
     {
         socket = tcpClientList[i];
         socket->disconnectFromHost();
-        bool ok = socket->waitForDisconnected(m_timeOutInMS);
-        if(!ok)
+        if(socket->state() == QAbstractSocket::ConnectedState)
         {
-            qDebug() << socket->errorString();
+            bool ok = socket->waitForDisconnected(m_timeOutInMS);
+            if(!ok)
+            {
+                qDebug() << socket->errorString();
+            }
         }
     }
 

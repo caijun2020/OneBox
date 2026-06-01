@@ -9,11 +9,15 @@ MainWindow::MainWindow(QWidget *parent) :
     m_udpServer(new UDPServer),
     m_udpClient(new UDPClient),
     m_serialPort(new QSerialPort),
+    m_modbusTCP(new ModbusTCP),
+    m_modbusRTU(new ModbusRTU),
     m_tcpServerW(new TcpServerWidget),
     m_tcpClientW(new TcpClientWidget),
     m_udpServerW(new UdpServerWidget),
     m_udpClientW(new UdpClientWidget),
-    m_serialW(new SerialDebugWidget)
+    m_serialW(new SerialDebugWidget),
+    m_modbusTCPW(new ModbusTCPWidget),
+    m_modbusRTUW(new ModbusRTUWidget)
 {
     ui->setupUi(this);
 
@@ -29,12 +33,14 @@ MainWindow::MainWindow(QWidget *parent) :
     m_udpServerW->bindModel(m_udpServer);
     m_udpClientW->bindModel(m_udpClient);
     m_serialW->bindModel(m_serialPort);
+    m_modbusTCPW->bindModel(m_modbusTCP);
+    m_modbusRTUW->bindModel(m_modbusRTU);
 
     // Set Window Title
     this->setWindowTitle(tr("All in One ToolBox"));
 
     // Set Menu Bar Version Info
-    ui->menuVersion->addAction("V1.0 2022-Mar-15");
+    ui->menuVersion->addAction("V1.1 2025-Jun-11");
 }
 
 MainWindow::~MainWindow()
@@ -55,6 +61,12 @@ MainWindow::~MainWindow()
 
     delete m_serialPort;
     delete m_serialW;
+
+    delete m_modbusTCP;
+    delete m_modbusTCPW;
+
+    delete m_modbusRTU;
+    delete m_modbusRTUW;
 }
 
 void MainWindow::initWidgetFont()
@@ -71,6 +83,8 @@ void MainWindow::initWidgetStyle()
         {UDP_CLIENT_TAB_INDEX, "UDP Client", m_udpClientW},
         {TCP_SERVER_TAB_INDEX, "TCP Server", m_tcpServerW},
         {TCP_CLIENT_TAB_INDEX, "TCP Client", m_tcpClientW},
+        {MODBUS_TCP_TAB_INDEX, "ModbusTCP", m_modbusTCPW},
+        {MODBUS_RTU_TAB_INDEX, "ModbusRTU", m_modbusRTUW},
     };
 
     // Init struct setting of tabWidget
